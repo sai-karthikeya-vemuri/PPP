@@ -10,38 +10,38 @@ def diff_n_times(graph, wrt, n):
         graph = ad.grad(graph, [wrt])[0]
     return graph
 
-def optimizer(model,loss,params,lr=0.01,tol=0.001):
+def optimizer(model,loss,lr=0.01,tol=0.001):
     """
     Optimize the parameters using Stochastic Gradient Descent
     Parameters to be optimized : W,B,Wf,Bf,{Uz,Wz,bz},{Ug,Wg,bg},{Ur,Wr,br}
-    """
-    #lr = ad.Variable(lr,name="lr")
-    #grad_params = ad.grad(loss,params)
-    epochs = 100
-    old_params = np.array(params)
-    for i in range(epochs):
-        grad_params = ad.grad(loss,params)
-        params = old_params - np.multiply(np.full_like(grad_params,lr),grad_params)
-        if np.absolute(old_params-params) < np.full_like(params,tol):
-            break
-        old_params = params
-        model.set_weights(params)
-        loss = loss_domain(model,[0.5,0.5])+loss_boundary(model,[0.5,1])+loss_initial(model,[0,0.5])
-        print("the loss:",loss)
+    
+
+    
+        #if np.absolute(loss()-new_loss()) > tol:
+            #loss = new_loss
+        print("the loss:",loss())
         if epochs % 10 == 0:
             print("Don't be tensed everything will be alright")
+        else:
+            print("The model is converged, the minimized loss is :",loss())
+            break
         
     if i ==100:
-        print("failed to converge,atleast you tried. Now the loss is", loss)
+        print("failed to converge,atleast you tried. Now the loss is", loss())
     else:
-        model.set_weights(params)
+        model.set_weights(new_params)
+        """
 
 
 
 
 
-    return params
-
+    return 0
+def updater(new_params):
+    model = NeuralNetLSTM(10,3,2,1)
+    model.set_weights(new_params)
+    print("The parameters are also set now")
+    return model
     
 def sampler(X_low,X_high,t_low,t_high):
     """
@@ -49,11 +49,14 @@ def sampler(X_low,X_high,t_low,t_high):
     Strategy = Uniform 
 
     """
-    X_interior = np.random.uniform(low=X_low,high=X_high,size=100)
-    t_interior = np.random.uniform(low=t_low,high=t_high,size=100)
-    t_at_lower_boundary=np.random.uniform(low=t_low,high=t_high,size=25)
-    t_at_upper_boundary = np.random.uniform(low=t_low,high=t_high,size=25)
-    X_at_initial_condition= np.random.uniform(low=X_low,high=X_high,size=50)
+    n=20
+    X_interior = np.random.uniform(low=X_low,high=X_high,size=n)
+    t_interior = np.random.uniform(low=t_low,high=t_high,size=n)
+    t_at_lower_boundary=np.random.uniform(low=t_low,high=t_high,size=n)
+    t_at_upper_boundary = np.random.uniform(low=t_low,high=t_high,size=n)
+    X_at_initial_condition= np.random.uniform(low=X_low,high=X_high,size=n)
+
+
 
 
 
@@ -109,17 +112,75 @@ samplings_initial = np.vstack((np.zeros_like(X_at_initial_condition.transpose())
 samplings_boundary_lower = np.vstack((t_at_lower_boundary.transpose(),-1*np.ones_like(t_at_lower_boundary.transpose()))).transpose()
 samplings_boundary_upper =np.vstack((t_at_upper_boundary.transpose(),np.ones_like(t_at_upper_boundary.transpose()))).transpose()
 
-model = NeuralNetLSTM(10,3,2,1)
+model = NeuralNetLSTM(20,2,2,1)
 L1= ad.Variable(0,name="L1")
 L2= ad.Variable(0,name="L2")
 L3= ad.Variable(0,name="L3")
 #val = u(model,samplings_boundary_lower[10])
-for i in range(100):
+for i in range(20):
     L1 =L1 +(loss_domain(model,samplings_domain[i]))
-for i in range(50):
+for i in range(10):
     L2 =L2 +(loss_initial(model,samplings_initial[i]))
-for i in range(25):
+for i in range(10):
     L3 =L3 +(loss_boundary(model,samplings_boundary_lower[i])) + (loss_boundary(model,samplings_boundary_upper[i]))
 
-total_loss = L1/100 + L2/50 + L3/50
-optimized_params = optimizer(model,total_loss,model.get_weights())
+total_loss = L1/20 + L2/10 + L3/20
+
+
+print("initial loss:",total_loss())
+
+
+params = model.get_weights()
+epochs = 150
+tol = ad.Variable(0.001,name="tol")
+lr= 0.001
+grad_params = []
+for j in range(epochs):
+    for i in params:
+        temp = ad.grad(total_loss,[i])[0]
+        
+        grad_params.append(temp)
+
+    new_params = []
+    for i in range(len(params)):
+        temp = params[i] - lr*grad_params[i]
+        #print(temp().shape)
+        new_params.append(temp)
+    model.set_weights(new_params)
+    new_loss = (loss_domain(model,samplings_domain[1]))+loss_boundary(model,samplings_boundary_lower[1]) + loss_boundary(model,samplings_boundary_upper[1])+loss_initial(model,samplings_initial[1])
+    print("Gradient Descent step taken for iteration :",j)
+    print("The updated loss is:",new_loss())
+    total_loss = new_loss
+    params = new_params
+"""  
+for i in range(epochs):
+    
+        
+    new_params = []
+        
+    for i in range(len(model.get_weights())):
+        new_params.append(params[i] - lr* grad_params[i])
+        
+    #new_model = updater(new_params)
+    #new_model.set_weights(new_params)
+    #model.set_weights(new_model.get_weights())
+    #print(new_model.output(np.array([[1,2]])))
+            
+    
+        
+        
+        
+    print("there is no problem in updating")
+        
+    print("gradient step taken , that should be a relief")
+    #model.set_weights(params)
+    print("Parameters updated")
+    
+    new_loss=(loss_domain(model,samplings_domain[1])+loss_boundary(model,samplings_boundary_lower[1])+loss_initial(model,samplings_initial[1]))
+    print("the new loss:")
+    print(new_loss())
+    print("something is not righht with the setter")
+    print("loss is also calculated")
+
+
+"""
