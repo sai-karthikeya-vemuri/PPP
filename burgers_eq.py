@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from NN_architecture import NeuralNetLSTM,lstm_layer
 import matplotlib.pyplot as plt 
+import random
+import sys
+sys.setrecursionlimit(5000)
 def z(model,points):
     return model.output(points)
 
@@ -11,57 +14,18 @@ def diff_n_times(graph, wrt, n):
         graph = ad.grad(graph, [wrt])[0]
     return graph
 
-def optimizer(model,loss,lr=0.01,tol=0.001):
-    """
-    Optimize the parameters using Stochastic Gradient Descent
-    Parameters to be optimized : W,B,Wf,Bf,{Uz,Wz,bz},{Ug,Wg,bg},{Ur,Wr,br}
-    
-
-    
-        #if np.absolute(loss()-new_loss()) > tol:
-            #loss = new_loss
-        print("the loss:",loss())
-        if epochs % 10 == 0:
-            print("Don't be tensed everything will be alright")
-        else:
-            print("The model is converged, the minimized loss is :",loss())
-            break
-        
-    if i ==100:
-        print("failed to converge,atleast you tried. Now the loss is", loss())
-    else:
-        model.set_weights(new_params)
-        """
 
 
-
-
-
-    return 0
-def updater(new_params):
-    model = NeuralNetLSTM(10,3,2,1)
-    model.set_weights(new_params)
-    print("The parameters are also set now")
-    return model
-    
-def sampler(X_low,X_high,t_low,t_high):
+def sampler(X_low,X_high,t_low,t_high,n):
     """
     Sample Points at problem area and boundary
     Strategy = Uniform 
 
     """
-    n=50
-    X_interior = np.random.uniform(low=X_low,high=X_high,size=50)
-    t_interior = np.random.uniform(low=t_low,high=t_high,size=50)
-    t_at_lower_boundary=np.random.uniform(low=t_low,high=t_high,size=15)
-    t_at_upper_boundary = np.random.uniform(low=t_low,high=t_high,size=15)
-    X_at_initial_condition= np.random.uniform(low=X_low,high=X_high,size=30)
-
-
-
-
-
-    return X_interior,t_interior,t_at_lower_boundary,t_at_upper_boundary,X_at_initial_condition
+    
+    X_interior = np.random.uniform(low=X_low,high=X_high,size=n)
+    t_interior = np.random.uniform(low=t_low,high=t_high,size=n)
+    return X_interior,t_interior
     
 
 
@@ -73,19 +37,21 @@ def loss_domain(model,points):
     L2: Initial Condition
     L3 : Boundary Condition 
     """
-    points = ad.Variable(np.array([points]))
-    u = (points()[0][0])*(1+points()[0][1])*(1-points()[0][1])*z(model,points) - np.sin(np.pi*points()[0][0])
-    du= ad.grad(u,[points])[0]
-    #print(du())
-    du_dt = du()[0][0]
-    du_dx =du()[0][1]
-    d2u_dx2 = diff_n_times(u,points,2)()[0][1]
+    t= ad.Variable(np.array([points[0]]),name = "t")
+    x= ad.Variable(np.array([points[1]]),name = "x")
+    points = ad.Reshape(ad.Concat(t,x,0),(1,2))
+
+    u = t*(1+x)*(1-x)*z(model,points) - ad.Sine(np.pi*x)
+    du_dt,du_dx = ad.grad(u,[t,x])
+    
+    
+    d2u_dx2 = diff_n_times(u,x,2)
     total_loss = du_dt + u*du_dx - (0.01/np.pi)*d2u_dx2
-    #total_loss=0
+    
 
 
 
-    return ad.Pow(total_loss,2)
+    return total_loss
 def loss_initial(model,points):
     penalizer = ad.Variable(np.sin(np.pi*points[1]),name="penalizer")
     points = ad.Variable(np.array([points]))
@@ -100,95 +66,91 @@ def loss_boundary(model,points):
 
      
     return ad.Pow(u,2) 
-    
+
 
 X_low = -1
 X_high = 1
 t_low = 0
 t_high =1
 #model = NeuralNetLSTM(X,10,3,2,1)
-X_interior,t_interior,t_at_lower_boundary,t_at_upper_boundary,X_at_initial_condition = sampler(X_low,X_high,t_low,t_high)
-samplings_domain = np.vstack((t_interior.transpose(),X_interior.transpose())).transpose()
-samplings_initial = np.vstack((np.zeros_like(X_at_initial_condition.transpose()),X_at_initial_condition.transpose())).transpose()
-samplings_boundary_lower = np.vstack((t_at_lower_boundary.transpose(),-1*np.ones_like(t_at_lower_boundary.transpose()))).transpose()
-samplings_boundary_upper =np.vstack((t_at_upper_boundary.transpose(),np.ones_like(t_at_upper_boundary.transpose()))).transpose()
+def samplings(n):
+    X_interior,t_interior = sampler(X_low,X_high,t_low,t_high,n)
+    samplings_domain = np.vstack((t_interior.transpose(),X_interior.transpose())).transpose()
+    return samplings_domain
 
 
-model = NeuralNetLSTM(20,2,2,1)
-#model.set_weights(params)
-L1= ad.Variable(0,name="L1")
-L2= ad.Variable(0,name="L2")
-L3= ad.Variable(0,name="L3")
-#val = u(model,samplings_boundary_lower[10])
-for i in range(50):
-    L1 =L1 +(loss_domain(model,samplings_domain[i]))
-#for i in range(30):
-    #L2 =L2 +(loss_initial(model,samplings_initial[i]))
-#for i in range(15):
-    #L3 =L3 +(loss_boundary(model,samplings_boundary_lower[i])) + (loss_boundary(model,samplings_boundary_upper[i]))
-
-total_loss = (L1/50) #+ (L2/30) 
+model = NeuralNetLSTM(30,2,2,1)
+loss_list =[]
+resampler_epochs = 5
+for k in range(resampler_epochs):  
+    print("Sampling done for the iteration:",k)
+    epochs = 30
+    tol = ad.Variable(0.001,name="tol")
+    lr= 0.00146
+    samplings_domain = samplings(50)
     
 
-#model = NeuralNetLSTM(20,2,2,1)
-#total_loss = loss(model.get_weights(),20)
-print("initial loss:",total_loss())
-
-
-params = model.get_weights()
-epochs = 50
-tol = ad.Variable(0.001,name="tol")
-lr= 0.001
-grad_params = []
-for j in range(epochs):
-    for i in params:
-        temp = ad.grad(total_loss,[i])[0]
+    for j in range(epochs):
+        L1= ad.Variable(0,name="L1")
         
-        grad_params.append(temp)
+        
 
-    new_params = []
-    for i in range(len(params)):
-        temp = params[i] - lr*grad_params[i]
-        #print(temp().shape)
-        new_params.append(temp)
     
-    model.set_weights(new_params)
-    #new_loss = (loss_domain(model,samplings_domain[1]))+loss_boundary(model,samplings_boundary_lower[1]) + loss_boundary(model,samplings_boundary_upper[1])+loss_initial(model,samplings_initial[1])
-    #new_loss = loss(model.get_weights(),20)
-    L1= ad.Variable(0,name="L1")
-    L2= ad.Variable(0,name="L2")
-    L3= ad.Variable(0,name="L3")
-#val = u(model,samplings_boundary_lower[10])
-    for i in range(40):
-        L1 =L1 +(loss_domain(model,samplings_domain[i]))
-    #for i in range(30):
-        #L2 =L2 +(loss_initial(model,samplings_initial[i]))
-    #for i in range(15):
-        #L3 =L3 +(loss_boundary(model,samplings_boundary_lower[i])) + (loss_boundary(model,samplings_boundary_upper[i]))
+        for i in range(50):
+            L1.value =L1.value +(loss_domain(model,samplings_domain[i])())
+        #rand = random.randint(0,39)
+        init_loss = ad.Pow(L1,2)/50
+        print("initial_loss",init_loss())
+        
+        
+        
 
-    new_loss = (L1/40) #+ (L2/30) 
-    if np.abs(new_loss()-total_loss()) < 0.1:
-        print("The loss is minimum, you can now test !")
+        for i in range(50):
+            L1 = loss_domain(model,samplings_domain[i])
+            total_loss = ad.Pow(L1,2)
+            #print("loss:",total_loss())
+            params = model.get_weights()
+            grad_params = [0 for _ in params]
+            grad_params= ad.grad(total_loss,params)
 
-        break
-    elif new_loss() > total_loss() :
-        print("The gradients are exploding, anyway plot with this set ")
-        break
-    else: 
-        print("Gradient Descent step taken for iteration :",j)
-        print("The updated loss is:",new_loss())
-        total_loss = new_loss
-        params = new_params
-if j == epochs -1:
-    print("OOps, couldn't converge")
+        
+    
+            new_params= [0 for _ in params]
+            #print("gradients taken!")
+            for i in range(len(params)):
+                new_params[i] = params[i] - lr* grad_params[i]
+            model.set_weights(new_params)
+            
+
+        
+    
+        L1= ad.Variable(0,name="L1")
+        
+
+        for i in range(50):
+            L1.value =L1.value +(loss_domain(model,samplings_domain[i])())
+        #L1 = L1 + loss_domain(model,samplings_domain[rand])
+        new_loss = ad.Pow(L1,2)/50
+        loss_list.append(new_loss()[0][0])
+        if new_loss()[0][0] < 1e-2 or new_loss()[0][0]> init_loss()[0][0] :
+            print("The loss is minimum for this sample!",new_loss()[0][0])
+
+            break
+    
+        else: 
+            print("Gradient Descent step taken for iteration :",j)
+            print("Now, loss",new_loss())
+            
 
 x_list = np.random.uniform(-1,1,100)
 t_list = np.full_like(x_list,0.25)
 y_list = []
+iter_list = [i for i in range(len(loss_list))]
 for i in x_list:
-    X = ad.Variable(np.array([[0.25,i]]))
-    val = 0.25*(i+1)*(1-i)*model.output(X)()[0][0] - np.sin(np.pi*i)
+    X = ad.Variable(np.array([[0.5,i]]))
+    val = 0.5*(i+1)*(1-i)*model.output(X)()[0][0] - np.sin(np.pi*i)
     y_list.append(val)
-
-plt.scatter(x_list,y_list) 
+fig, ax = plt.subplots(2)
+ax[0].scatter(x_list,y_list,label="The Ans")
+ax[1].scatter(iter_list,loss_list,label="Loss over iterations") 
 plt.show()

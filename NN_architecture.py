@@ -5,11 +5,16 @@ and at present thr autodiff package by Bruno Gavranovic'
 """
 import numpy as np 
 import autodiff as ad 
+import os 
+import os
+#os.environ[“PATH”] += os.pathsep + r'C:\users\91994\appdata\local\programs\python\python37\lib\site-packages\graphviz-2.38\release\bin’
 
 def diff_n_times(graph, wrt, n):
     for i in range(n):
         graph = ad.grad(graph, [wrt])[0]
+
     return graph
+
 def xavier(input_dim,output_dim):
     r = 4*np.sqrt(6/(input_dim+output_dim))
     
@@ -19,6 +24,11 @@ def xavier(input_dim,output_dim):
 
 
     return np.array(value)
+
+"""
+def xavier(input_dim,output_dim):
+    return np.ones((input_dim,output_dim))
+"""
 class lstm_layer():
 
     def __init__(self,input_dim,output_dim):
@@ -79,7 +89,7 @@ class NeuralNetLSTM():
     
         self._W = ad.Variable(xavier(self.input_dim,self.number_of_units),name = "W")
         self._B = ad.Variable(xavier(1,self.number_of_units),name = "B")
-        self._Wf = ad.Variable(xavier(self.number_of_units,1),name = "Wf")
+        self._Wf = ad.Variable(xavier(self.number_of_units,self.output_dim),name = "Wf")
         self._Bf = ad.Variable(xavier(1,self.output_dim),name = "Bf")
 
         
@@ -96,10 +106,10 @@ class NeuralNetLSTM():
         
     
     def set_weights(self,params_of_layers):
-        self._W.value = params_of_layers[0]()
-        self._B.value = params_of_layers[1]()
+        #self._W.value = params_of_layers[0]()
+        self._B.value = params_of_layers[0]()
         layer_params =[]
-        iter = 2
+        iter = 1
         
 
         for i in range(self.number_of_layers + 1):
@@ -110,7 +120,7 @@ class NeuralNetLSTM():
         self._Bf.value = params_of_layers[-1]()
     def get_weights(self):
         return_params = []
-        return_params.append(self._W)
+        #return_params.append(self._W)
         return_params.append(self._B)
         for i in range(self.number_of_layers + 1):
             return_params = return_params + (self.layers[i].get_weights_layer())
@@ -135,26 +145,76 @@ class NeuralNetLSTM():
         return val
 def z(model,points):
     return model.output(points)
+def loss_domain(model,points):
+    """
+    calculate loss at all the points. 
+    three terms: 
+    L1 : domain 
+    L2: Initial Condition
+    L3 : Boundary Condition 
+    """
+    t= ad.Variable(np.array([points[0]]),name = "t")
+    x= ad.Variable(np.array([points[1]]),name = "x")
+
+    points = ad.Reshape(ad.Concat(t,x,0),(1,2))
+    u = t*(1+x)*(1-x)*z(model,points) - ad.Sine(np.pi*x)
+    du_dt,du_dx = ad.grad(u,[t,x])
+    print("du_dt",du_dt())
+    print("du_dx",du_dx())
+    
+    d2u_dx2 = diff_n_times(u,x,2)
+    print("d2u_dx2",d2u_dx2())
+    total_loss = du_dt + u*du_dx - (0.01/np.pi)*d2u_dx2
+    print("loss",total_loss())
+
+    return total_loss
 if __name__ == "__main__":
 
     
+    x=ad.Variable(np.array([1]),name ="x")
     
-    X=ad.Variable(np.array([[5,8]]),name="X")
-    model=NeuralNetLSTM(10,1,2,1)
-    val = model.output(X)
-    print(val())
-    gradx = ad.grad(val,[X])[0]
-    #for i in model.get_weights():
-        #print(i())
-    weights = model.get_weights()
-    print(weights[1]())
-    new_weights=[]
-    for i in range(len(model.get_weights())):
-        new_weights.append(weights[i] - 2*weights[i])
-    #print(new_weights)
+    t=ad.Variable(np.array([1]),name = "t")
+    points1 = ad.Variable(np.array([1]),name="points1")
+    #points=ad.Concat()
+    points2 = ad.Variable(np.array([[1],[1]]),name="points2")
+    W = ad.Variable(np.array([2]),name="W")
+    #B = ad.Variable()
+    q = ad.Concat(x,t,0)
+    
+    
 
-    model.set_weights(new_weights)
-    print(model.output(X)())
+    e = ad.Variable(np.full((2,2),1.5),name="e")
+    q = ad.Reshape(q,(1,2))
+    r= ad.MatMul(q,e)
+    
+    
+    model=NeuralNetLSTM(50,2,2,1)
+    point = ad.Variable(np.array([[0,0]]),name = "point")
+    val = model.output(q)
+    [dx,dt] = ad.grad(val,[x,t])
+    
+
+    d2x=diff_n_times(val,x,2)
+    loss = loss_domain(model,[0,-1])
+    
+    dx = ad.grad(loss,[x])
+
+    
+    
+
+
+
+    
+    
+    
+
+    
+    
+    
+    
+    
+
+    
 
     
     
