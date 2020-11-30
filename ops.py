@@ -342,8 +342,32 @@ class Exp(Node):
         if self.node == wrt:
             return previous_grad * self
         return 0
+class Sine(Node):
+    def __init__(self, node, name="Sine"):
+        super().__init__([node], name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
 
+    def _eval(self):
+        return np.sin(self.node())
 
+    def _partial_derivative(self, wrt, previous_grad):
+        if self.node == wrt:
+            return previous_grad * Cosine(self.node)
+        return 0
+class Cosine(Node):
+    def __init__(self, node, name="Exp"):
+        super().__init__([node], name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return np.cos(self.node())
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if self.node == wrt:
+            return -previous_grad * Sine(self.node)
+        return 0
 class Sigmoid(Node):
     def __init__(self, node, name="Sigmoid"):
         super().__init__([node], name=name)
@@ -400,13 +424,28 @@ class NormalDistribution(Node):
 def Tanh(x):
     val = Exp(-2 * x)
     return (1 - val) / (1 + val)
-
-
+@module_wrapper
+def Tan(x):
+    return Sine(x)/Cosine(x)
+@module_wrapper
+def Sinhx(x):
+    val = Exp(x) - Exp(-x)
+    return val/2
+@module_wrapper
+def Coshx(x):
+    val = Exp(x) + Exp(-x)
+    return val/2
+@module_wrapper
+def Sechx(x):
+    val = Exp(x) + Exp(-x)
+    return 2/val
 @module_wrapper
 def SquaredDifference(x, y):
     diff = x - y
     return diff * diff
-
+@module_wrapper
+def MatMulV(x,y):
+    return Einsum("j,ij->j",x,y)
 
 @module_wrapper
 def MatMul(x, y):
