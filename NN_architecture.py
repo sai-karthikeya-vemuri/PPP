@@ -51,32 +51,40 @@ class lstm_layer():
         S=S_Old
         val_z = ad.MatMul(X,self._Uz) + ad.MatMul(S,self._Wz) + self._bz
         Z=ad.Sigmoid(val_z)
+        #print("Z",Z())
         val_g = ad.MatMul(X,self._Ug) + ad.MatMul(S,self._Wg) + self._bg
         G=ad.Sigmoid(val_g)
+        #print("G",G())
         val_r = ad.MatMul(X,self._Ur) + ad.MatMul(S,self._Wr) + self._br
         R=ad.Sigmoid(val_r)
+        #print("R",R())
         val_h = ad.MatMul(X,self._Uh) + ad.MatMul(S*R,self._Wh) + self._bh
 
         H=ad.Sigmoid(val_h)
+        #print("H",H())
 
         S_New = ((ad.Variable(np.ones_like(G.eval()))- G ) * H) + (Z*S)
+        #print("Snew",S_New())
+        temp = (ad.Variable(np.ones_like(S.eval()))- S ) * S
+        #val = (-G * ((ad.Variable(np.ones_like(G.eval()))- G ) * H) * (self._Ug+self._Wg*self._Wg*temp)) + (((ad.Variable(np.ones_like(G.eval()))- G ) * H*(ad.Variable(np.ones_like(H.eval()))- H ))*(self._Uz+self._Wh*self._Wg*R*temp)+ (self._Wg*S*(ad.Variable(np.ones_like(R.eval()))- R ) * R*(self._Ug+self._Wg*self._Wg*temp))) +(Z*self._Wg*temp) + (S*(self._Ug+self._Wg*self._Wg*temp))
+        #print(val())
 
 
         return S_New
     def set_params_layer(self,params):
-        self._Uz.value = params[0]()
+        self._Uz.value = params[0]
 
-        self._Ug.value = params[1]()
-        self._Ur.value = params[2]()
-        self._Uh.value = params[3]()
-        self._Wz.value = params[4]()
-        self._Wg.value = params[5]()
-        self._Wr.value = params[6]()
-        self._Wh.value = params[7]()
-        self._bz.value = params[8]()
-        self._bg.value = params[9]()
-        self._br.value = params[10]()
-        self._bh.value = params[11]()
+        self._Ug.value = params[1]
+        self._Ur.value = params[2]
+        self._Uh.value = params[3]
+        self._Wz.value = params[4]
+        self._Wg.value = params[5]
+        self._Wr.value = params[6]
+        self._Wh.value = params[7]
+        self._bz.value = params[8]
+        self._bg.value = params[9]
+        self._br.value = params[10]
+        self._bh.value = params[11]
     def get_weights_layer(self):
         return [self._Uz,self._Ug,self._Ur,self._Uh,self._Wz,self._Wg,self._Wr,self._Wh,self._bz,self._bg,self._br,self._bh]
 class NeuralNetLSTM():
@@ -107,7 +115,7 @@ class NeuralNetLSTM():
     
     def set_weights(self,params_of_layers):
         #self._W.value = params_of_layers[0]()
-        self._B.value = params_of_layers[0]()
+        self._B.value = params_of_layers[0]
         layer_params =[]
         iter = 1
         
@@ -116,8 +124,8 @@ class NeuralNetLSTM():
             self.layers[i].set_params_layer([param for param in params_of_layers[iter:iter+12]])
             iter = iter + 12
 
-        self._Wf.value = params_of_layers[-2]() 
-        self._Bf.value = params_of_layers[-1]()
+        self._Wf.value = params_of_layers[-2] 
+        self._Bf.value = params_of_layers[-1]
     def get_weights(self):
         return_params = []
         #return_params.append(self._W)
@@ -129,6 +137,7 @@ class NeuralNetLSTM():
         return return_params
     def output(self,X):
         S = ad.Sigmoid(ad.MatMul(X,self._W) + self._B)
+        #print("S:",S())
         S1 = self.layer1.output_layer(S,X)
         S_list = []
         S_list.append(S1)
@@ -141,7 +150,7 @@ class NeuralNetLSTM():
         #print(self.Wf.shape)
         #print(self.Bf.shape)
         val = ad.MatMul(S_final,self._Wf) + self._Bf
-        
+        #print("The output:",val())
         return val
 def z(model,points):
     return model.output(points)
@@ -154,10 +163,10 @@ def loss_domain(model,points):
     L3 : Boundary Condition 
     """
     t= ad.Variable(np.array([points[0]]),name = "t")
-    x= ad.Variable(np.array([points[1]]),name = "x")
+    x= ad.Variable(np.array([points[0]]),name = "x")
 
     points = ad.Reshape(ad.Concat(t,x,0),(1,2))
-    u = t*(1+x)*(1-x)*z(model,points) - ad.Sine(np.pi*x)
+    u = (1+x)*(1-x)*model.output(points)
     du_dt,du_dx = ad.grad(u,[t,x])
     print("du_dt",du_dt())
     print("du_dx",du_dx())
@@ -170,7 +179,25 @@ def loss_domain(model,points):
     return total_loss
 if __name__ == "__main__":
 
+    model=NeuralNetLSTM(2,0,2,1)
+    t = ad.Variable(np.array([0.75]),name = "t")
+    x = ad.Variable(np.array([0.75]),name="x")
+    point = ad.Reshape(ad.Concat(t,x,0),(1,2))
+    print(model.output(point)())
+    gradwf = ad.grad(model.output(point),[x])[0]
+    grad1 = ad.grad(model.output(point),[x])[0]
+    grad2 = ad.grad(model.output(point),[t])[0]
+    print("dX",grad1())
+    print("dt",grad2())
+    grad3 = ad.grad(model.output(point),[x,t])
+    loss = loss_domain(model,[0.75,0.75])
     
+
+    
+
+
+
+    """
     x=ad.Variable(np.array([1]),name ="x")
     
     t=ad.Variable(np.array([1]),name = "t")
@@ -188,18 +215,19 @@ if __name__ == "__main__":
     r= ad.MatMul(q,e)
     
     
-    model=NeuralNetLSTM(50,2,2,1)
+    model=NeuralNetLSTM(2,0,2,1)
     point = ad.Variable(np.array([[0,0]]),name = "point")
     val = model.output(q)
     [dx,dt] = ad.grad(val,[x,t])
     
 
     d2x=diff_n_times(val,x,2)
-    loss = loss_domain(model,[0,-1])
+    loss = loss_domain(model,[0.5,0.5])
+    
     
     dx = ad.grad(loss,[x])
 
-    
+    """
     
 
 
