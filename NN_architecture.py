@@ -14,7 +14,7 @@ def diff_n_times(graph, wrt, n):
         graph = ad.grad(graph, [wrt])[0]
 
     return graph
-
+"""
 def xavier(input_dim,output_dim):
     r = 4*np.sqrt(6/(input_dim+output_dim))
     
@@ -24,7 +24,10 @@ def xavier(input_dim,output_dim):
 
 
     return np.array(value)
-
+"""
+def xavier(input_dim,output_dim):
+    stddev = np.sqrt(2/(input_dim+output_dim))
+    return np.random.normal(loc=0.0,scale=stddev,size=(input_dim,output_dim))
 """
 def xavier(input_dim,output_dim):
     return np.ones((input_dim,output_dim))
@@ -65,7 +68,7 @@ class lstm_layer():
 
         S_New = ((ad.Variable(np.ones_like(G.eval()))- G ) * H) + (Z*S)
         #print("Snew",S_New())
-        temp = (ad.Variable(np.ones_like(S.eval()))- S ) * S
+        
         #val = (-G * ((ad.Variable(np.ones_like(G.eval()))- G ) * H) * (self._Ug+self._Wg*self._Wg*temp)) + (((ad.Variable(np.ones_like(G.eval()))- G ) * H*(ad.Variable(np.ones_like(H.eval()))- H ))*(self._Uz+self._Wh*self._Wg*R*temp)+ (self._Wg*S*(ad.Variable(np.ones_like(R.eval()))- R ) * R*(self._Ug+self._Wg*self._Wg*temp))) +(Z*self._Wg*temp) + (S*(self._Ug+self._Wg*self._Wg*temp))
         #print(val())
 
@@ -137,6 +140,8 @@ class NeuralNetLSTM():
         return return_params
     def output(self,X):
         S = ad.Sigmoid(ad.MatMul(X,self._W) + self._B)
+        
+        
         #print("S:",S())
         S1 = self.layer1.output_layer(S,X)
         S_list = []
@@ -152,6 +157,7 @@ class NeuralNetLSTM():
         val = ad.MatMul(S_final,self._Wf) + self._Bf
         #print("The output:",val())
         return val
+        
 def z(model,points):
     return model.output(points)
 def loss_domain(model,points):
@@ -166,7 +172,7 @@ def loss_domain(model,points):
     x= ad.Variable(np.array([points[0]]),name = "x")
 
     points = ad.Reshape(ad.Concat(t,x,0),(1,2))
-    u = (1+x)*(1-x)*model.output(points)
+    u = model.output(points)
     du_dt,du_dx = ad.grad(u,[t,x])
     print("du_dt",du_dt())
     print("du_dx",du_dx())
@@ -178,12 +184,24 @@ def loss_domain(model,points):
 
     return total_loss
 if __name__ == "__main__":
+    model = NeuralNetLSTM(5,1,2,1)
+    print(model.output(np.array([[0,1]])))
+    
+    print(model.output(np.array([[0,1]])))
 
+    
+
+
+    
+
+
+
+"""
     model=NeuralNetLSTM(2,0,2,1)
     t = ad.Variable(np.array([0.75]),name = "t")
     x = ad.Variable(np.array([0.75]),name="x")
     point = ad.Reshape(ad.Concat(t,x,0),(1,2))
-    print(model.output(point)())
+    print("output:",model.output(point)())
     gradwf = ad.grad(model.output(point),[x])[0]
     grad1 = ad.grad(model.output(point),[x])[0]
     grad2 = ad.grad(model.output(point),[t])[0]
@@ -192,12 +210,15 @@ if __name__ == "__main__":
     grad3 = ad.grad(model.output(point),[x,t])
     loss = loss_domain(model,[0.75,0.75])
     
+    
+   
+    
 
     
 
 
 
-    """
+    
     x=ad.Variable(np.array([1]),name ="x")
     
     t=ad.Variable(np.array([1]),name = "t")
@@ -227,7 +248,7 @@ if __name__ == "__main__":
     
     dx = ad.grad(loss,[x])
 
-    """
+"""
     
 
 

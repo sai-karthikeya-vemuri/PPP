@@ -56,51 +56,37 @@ def loss_calculator(model,x,t,xi,ui,xb,tb):
 
     lossb = ad.ReduceSumToShape(ad.Pow(fb,2),(1,1))/Nb
 
-
-
-
-
-
-
-
-
-    
-
-
-
-     
-    
     
     loss = lossd + lossi + lossb
     return loss
-model =NeuralNetLSTM(10,2,2,1)
+model =NeuralNetLSTM(50,2,2,1)
 np.random.seed(0)
 x = np.random.uniform(-1.0,1.0,1000)
 t = np.random.uniform(0.0,1.0,1000)
 #t=np.full_like(x,0.5)
-xi = np.linspace(-1.0,1.0,200)
+xi = np.linspace(-1.0,1.0,20)
 ui = -np.sin(np.pi*xi)
-xub = np.full(100,1.0)
-xlb= np.full(100,-1.0)
+xub = np.full(10,1.0)
+xlb= np.full(10,-1.0)
 xb=[]
 for i,j in zip(xub,xlb):
     xb.append(i)
     xb.append(j)
 xb = np.array(xb)
-tb = np.linspace(0,1.0,200)
+tb = np.linspace(0,1.0,20)
 
 
-epochs = 100
-optimizer = ad.SGDOptimizer(len(model.get_weights()))
+epochs = 2001
+optimizer = ad.Adam(len(model.get_weights()))
 
 for i in range(epochs):
     
     
 
     loss= loss_calculator(model,x,t,xi,ui,xb,tb)
-    if i % 25 ==0:
-        print("Epoch:",i)
-        print("Loss",loss())
+    
+    print("Epoch:",i)
+    print("Loss",loss())
     if loss() < 1e-3:
         break
     params = model.get_weights()
@@ -111,7 +97,7 @@ for i in range(epochs):
     model.set_weights(new_params)
     
     
-    if i % 50 ==0:
+    if i>0 and i % 1000 ==0:
         x_pred=np.linspace(-1,1,50)
         t_pred=np.full_like(x_pred,0.5)
         x_pred= ad.Variable(x_pred,name="x_pred")
@@ -123,7 +109,7 @@ for i in range(epochs):
         U_pred= model.output(X_pred)
         x_plot=np.linspace(-1,1,50)
         yplot = U_pred()
-        plt.plot(x_plot,yplot,label=f'for iter {i} ')
+        plt.plot(x_plot,yplot,label=f't=0.5 for iter {i} ')
         
         
 
