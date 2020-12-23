@@ -1,120 +1,116 @@
 import autodiff as ad 
 import numpy as np 
 import matplotlib.pyplot as plt 
-from NN_architecture import NeuralNetLSTM,lstm_layer
+from NN_architecture_2 import NeuralNetLSTM,lstm_layer
 import matplotlib.pyplot as plt 
 import random
 import sys
 sys.setrecursionlimit(5000)
 from pyDOE import lhs
+from scipy.io import loadmat
+
 """
 And again... i don't know why
 May be you aregoing to fail.
 Just please be ready to fail..it's not that hard...
 Just do it from scratch again, I am fed up changing the old one
 """
-def loss_calculator(model,x,t,xi,ui,xb,tb):
-    N = len(x)
-    Ni = len(xi)
-    Nb = len(xb) 
-    x= ad.Variable(x,name="x")
-    x=ad.Reshape(x,(N,1))
-    t=ad.Variable(t,name="t")
-    t=ad.Reshape(t,(N,1))
-    X = ad.Concat(t,x,1)
+def loss_calculator(model,X_u,X_f,lb,ub,U,N_f,N_u):
+    xb =ad.Variable(X_u[:,0:1],"xb")
+    tb = ad.Variable(X_u[:,1:2],"tb")
 
-    ti = ad.Variable(np.zeros_like(xi),name="ti")
-    ti= ad.Reshape(ti,(Ni,1))
-    xi = ad.Variable(xi,name="xi")
-    xi = ad.Reshape(xi,(Ni,1))
-    Xi = ad.Concat(ti,xi,1)
-    tb= ad.Variable(tb,name="tb")
-    tb= ad.Reshape(tb,(Nb,1))
-    xb = ad.Variable(xb,name="xb")
-    xb = ad.Reshape(xb,(Nb,1))
-    Xb = ad.Concat(tb,xb,1)
-
-    u =model.output(X)
-    ux = ad.grad(u,[x])[0]
-    ut = ad.grad(u,[t])[0]
-    uxx = ad.grad(ux,[x])[0]
+    xd =ad.Variable(X_f[:,0:1],"xd")
+    td =  ad.Variable(X_f[:,1:2],"td")
     nu= 0.01/np.pi
-
-    f = ut + u*ux - nu*uxx
-
-    lossd = ad.ReduceSumToShape(ad.Pow(f,2),(1,1))/N
+    U = ad.Variable(U,"U")
 
 
-    ui = ad.Variable(ui,name="ui")
-    ui = ad.Reshape(ui,(Ni,1))
+    X_d = ad.Concat(xd,td,1)
+    X_b = ad.Concat(xb,tb,1)
+    u = model.output(X_d)
+    u_t = ad.grad(u,[td])[0]
+    u_x = ad.grad(u,[xd])[0]
+    u_xx = ad.grad(u_x,[xd])[0]
+    f = u_t + u*u_x - nu*u_xx
+    lossd = ad.ReduceSumToShape(ad.Pow(f,2),())/N_f
 
-    fi = model.output(Xi) - ui
+    ub = model.output(X_b)
+    fb = ub - U
 
-    lossi = ad.ReduceSumToShape(ad.Pow(fi,2),(1,1))/Ni
+    lossb = ad.ReduceSumToShape(ad.Pow(fb,2),())/N_u
 
-    fb = model.output(Xb)
+    loss = lossd + lossb
 
-    lossb = ad.ReduceSumToShape(ad.Pow(fb,2),(1,1))/Nb
 
-    
-    loss = lossd + lossi + lossb
+
+
+
+
+
     return loss
-model =NeuralNetLSTM(50,2,2,1)
-np.random.seed(0)
-x = np.random.uniform(-1.0,1.0,1000)
-t = np.random.uniform(0.0,1.0,1000)
-#t=np.full_like(x,0.5)
-xi = np.linspace(-1.0,1.0,20)
-ui = -np.sin(np.pi*xi)
-xub = np.full(10,1.0)
-xlb= np.full(10,-1.0)
-xb=[]
-for i,j in zip(xub,xlb):
-    xb.append(i)
-    xb.append(j)
-xb = np.array(xb)
-tb = np.linspace(0,1.0,20)
 
 
-epochs = 2001
+
+N_f = 2000
+N_u = 20
+data = loadmat('initial_data.mat')
+    
+t = data['t'].flatten()[:,None]
+x = data['x'].flatten()[:,None]
+Exact = np.real(data['usol']).T
+    
+X, T = np.meshgrid(x,t)
+    
+X_star = np.hstack((X.flatten()[:,None], T.flatten()[:,None]))
+u_star = Exact.flatten()[:,None]              
+
+
+lb = X_star.min(0)
+ub = X_star.max(0)    
+        
+xx1 = np.hstack((X[0:1,:].T, T[0:1,:].T))
+uu1 = Exact[0:1,:].T
+xx2 = np.hstack((X[:,0:1], T[:,0:1]))
+uu2 = Exact[:,0:1]
+xx3 = np.hstack((X[:,-1:], T[:,-1:]))
+uu3 = Exact[:,-1:]
+    
+X_u_train = np.vstack([xx1, xx2, xx3])
+X_f_train = lb + (ub-lb)*lhs(2, N_f)
+X_f_train = np.vstack((X_f_train, X_u_train))
+u_train = np.vstack([uu1, uu2, uu3])
+    
+idx = np.random.choice(X_u_train.shape[0], N_u, replace=False)
+X_u_train = X_u_train[idx, :]
+u_train = u_train[idx,:]
+model = NeuralNetLSTM(20,2,2,1)
+
+
+epochs = 501
 optimizer = ad.Adam(len(model.get_weights()))
-
 for i in range(epochs):
+
     
     
 
-    loss= loss_calculator(model,x,t,xi,ui,xb,tb)
+    loss = loss_calculator(model,X_u_train,X_f_train,lb,ub,u_train,N_f,N_u)
+    if i%10 ==0:
+
+        print(loss())
     
-    print("Epoch:",i)
-    print("Loss",loss())
-    if loss() < 1e-3:
-        break
     params = model.get_weights()
-
-    grad_params = ad.grad(loss,params)
+    grad_params = ad.grad(loss,model.get_weights())
+    #print("grad params shape",grad_params[6]()) 
     new_params = [0 for _ in params]
     new_params = optimizer([i() for i in params], [i() for i in grad_params])
     model.set_weights(new_params)
-    
-    
-    if i>0 and i % 1000 ==0:
-        x_pred=np.linspace(-1,1,50)
-        t_pred=np.full_like(x_pred,0.5)
-        x_pred= ad.Variable(x_pred,name="x_pred")
-        x_pred=ad.Reshape(x_pred,(50,1))
-        t_pred=ad.Variable(t_pred,name="t_pred")
-        t_pred=ad.Reshape(t_pred,(50,1))
-        X_pred = ad.Concat(t_pred,x_pred,1)
 
-        U_pred= model.output(X_pred)
-        x_plot=np.linspace(-1,1,50)
-        yplot = U_pred()
-        plt.plot(x_plot,yplot,label=f't=0.5 for iter {i} ')
-        
-        
+    if i % 100 == 0:
+        x_plot = ad.Variable(np.random.uniform(0,1,(100,1)),"x_plot")
+        t_plot = ad.Variable(np.full((100,1),0.5),"t_plot")
+        X_plot = ad.Concat(x_plot,t_plot,1)
 
-plt.plot(xi,ui,label="t=0")
+        U_plot = model.output(X_plot)
+        plt.scatter(x_plot(),U_plot(),label=f'for iter {i}')
 plt.legend()
 plt.show()
-
-
