@@ -25,15 +25,15 @@ def xavier(input_dim,output_dim):
 
     return np.array(value)
 """
-
+"""
 def xavier(input_dim,output_dim):
     stddev = np.sqrt(2/(input_dim+output_dim))
     return np.random.normal(loc=0.0,scale=stddev,size=(input_dim,output_dim))
-
 """
+
 def xavier(input_dim,output_dim):
     return np.ones((input_dim,output_dim))
-"""
+
 class lstm_layer():
 
     def __init__(self,input_dim,output_dim):
@@ -94,6 +94,7 @@ class lstm_layer():
         return [self._Uz,self._Ug,self._Ur,self._Uh,self._Wz,self._Wg,self._Wr,self._Wh,self._bz,self._bg,self._br,self._bh]
 class NeuralNetLSTM():
     def __init__(self,number_of_units,number_of_layers,input_dim,output_dim):
+        assert isinstance(number_of_units,int) and number_of_units>=2 and number_of_layers >=0 and isinstance(number_of_layers,int) and isinstance(input_dim,int) and input_dim>0 and isinstance(output_dim,int) and output_dim>0 
         self.number_of_units= number_of_units
         self.number_of_layers= number_of_layers
         self.input_dim = input_dim
@@ -163,7 +164,7 @@ class NeuralNetLSTM():
 
     
     
-    
+
 
     
     
