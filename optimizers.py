@@ -112,7 +112,7 @@ class Adamax(optimizer):
         for i in range(self.num_params):
             self.momentum[i] = self.b1 * self.momentum[i]  + (1-self.b1)*grad_params[i]
             #print(self.momentum[i])
-            self.velocity[i] = (self.b2*self.velocity[i], abs(grad_params[i]))
+            self.velocity[i] = max(self.b2*self.velocity[i], abs(np.linalg.norm(grad_params[i])))
 
             
             #print(self.velocity[i])
@@ -124,7 +124,7 @@ class Adamax(optimizer):
 
 def loss_calc(model):
     def f(x):
-        return x**2
+        return np.sin(x)
     x= np.linspace(-1,+1,50)
     y = f(x)
 
@@ -135,6 +135,29 @@ def loss_calc(model):
     f = y_pred - y
     loss = ad.ReduceSumToShape(ad.Pow(f,2),())
     return loss
+
+
+model = NeuralNetLSTM(5,0,1,1)
+
+
+optimizer=Adamax(len(model.get_weights()))
+loss_list =[]
+for i in range(1000):
+    params = model.get_weights()
+    loss = loss_calc(model)
+    print("iteration ",i)
+    loss_list.append(loss())
+    grad_params = ad.grad(loss,params)
+    new_params = optimizer([i() for i in params], [i() for i in grad_params])
+    #print(new_params)
+    model.set_weights(new_params)
+
+
+x= np.linspace(0,1000,1000)
+plt.plot(x,loss_list,label="Adamax")
+
+
+
 
 
 model = NeuralNetLSTM(5,0,1,1)
