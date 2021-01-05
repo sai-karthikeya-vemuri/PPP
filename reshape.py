@@ -103,7 +103,7 @@ class Slice(Node):
 
 
 class Pad(Node):
-    def __init__(self, node, pad_width, constant_values, name="Slice"):
+    def __init__(self, node, pad_width, constant_values, name="Pad"):
         """
 
         :param node:
@@ -134,27 +134,3 @@ class Pad(Node):
             return previous_grad[slice_val]
         return 0
 
-#
-# class AsStrided(Primitive):
-#     def __init__(self, node, shape, strides):
-#         super().__init__([node], name="AsStrided")
-#         self.node = self.children[0]
-#         self.shape = shape
-#         self.strides = strides
-#
-#     def _eval(self):
-#         return as_strided(self.node(), shape=self.shape, strides=self.strides)
-#
-#     def partial_derivative(self, wrt, previous_grad):
-#         if self.node == wrt:  # TODO strides need to be known before graph evaluation?
-#             seq = np.arange(np.prod(self.node.shape)).reshape(*self.node.shape)
-#             as_stride = as_strided(seq, shape=self.shape, strides=self.strides)
-#             it = np.nditer(seq, flags=['multi_index'])
-#
-#             res = np.zeros(self.node.shape)
-#             while not it.finished:
-#                 ind = it.multi_index
-#                 res[ind] = ((as_stride == seq[ind]) * previous_grad()).sum()
-#                 it.iternext()
-#             return Variable(res)
-#         return 0

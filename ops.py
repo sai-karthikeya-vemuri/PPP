@@ -217,67 +217,6 @@ class Einsum(Node):
         return ",".join(list_of_ops[:-1]) + "->" + list_of_ops[-1]
 
 
-class ReLU(Node):
-    def __init__(self, node, name="ReLU"):
-        super().__init__([node], name)
-        self.node = self.children[0]
-        self.shape = self.node.shape
-
-    def _eval(self):
-        val = self.node()
-        return val * (val > 0)
-
-    def _partial_derivative(self, wrt, previous_grad):
-        if self.node == wrt:
-            return previous_grad * self * Recipr(self)
-        return 0
-
-
-class SoftmaxCEWithLogits(Node):
-    def __init__(self, labels, logits, name="SoftmaxCEWithLogits"):
-        super().__init__([labels, logits], name=name)
-        self.labels, self.logits = self.children
-
-        self.shape = self.logits.shape[:-1]
-
-    def _eval(self):
-        labels_val = self.labels()
-        logits_val = self.logits()
-        labels_sum = np.sum(labels_val, axis=1)
-        if not np.allclose(labels_sum, np.ones_like(labels_sum)):
-            raise ValueError("Labels must be a valid probability distribution!")
-
-        # calculating a numberically stable logsumpexp by shifting all the values
-        maxx = np.expand_dims(np.max(logits_val, axis=-1), axis=-1)
-        logsumexp = maxx + np.expand_dims(np.log(np.sum(np.exp(logits_val - maxx), axis=-1)), axis=-1)
-
-        s = -np.sum(labels_val * logits_val - labels_val * logsumexp, axis=-1)
-        return s
-
-    def _partial_derivative(self, wrt, previous_grad):
-        if wrt == self.logits:
-            return Einsum("...i,...ij->...ij", previous_grad, Softmax(self.logits) - self.labels)
-        elif wrt == self.labels:
-            return Variable(0)
-        return 0
-
-
-class SigmoidCEWithLogits(Node):
-    def __init__(self, labels, logits, name="SigmoidCEWithLogits"):
-        super().__init__([labels, logits], name)
-        self.labels, self.logits = self.children
-        self.shape = self.logits.shape
-
-    def _eval(self):
-        z = self.labels()
-        x = self.logits()
-        return np.maximum(x, 0) - x * z + np.log(1 + np.exp(-abs(x)))
-
-    def _partial_derivative(self, wrt, previous_grad):
-        if wrt == self.logits:
-            return Einsum("...ij,...ij->...ij", previous_grad, Sigmoid(self.logits) - self.labels)
-        return 0
-
 
 class Pow(Node):
     def __init__(self, first, second, name="Pow"):
@@ -327,7 +266,19 @@ class Identity(Node):
         if self.node == wrt:
             return previous_grad
         return 0
+class Absolute(Node):
+    def __init__(self, node, name="Absolute"):
+        super().__init__([node], name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
 
+    def _eval(self):
+        return np.abs(self.node())
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if self.node == wrt:
+            return previous_grad*self.node*Recipr(Pow(Pow(self.node,2),0.5))
+        return 0
 
 class Exp(Node):
     def __init__(self, node, name="Exp"):
@@ -356,7 +307,7 @@ class Sine(Node):
             return previous_grad * Cosine(self.node)
         return 0
 class Cosine(Node):
-    def __init__(self, node, name="Exp"):
+    def __init__(self, node, name="Cosine"):
         super().__init__([node], name)
         self.node = self.children[0]
         self.shape = self.node.shape
@@ -367,6 +318,59 @@ class Cosine(Node):
     def _partial_derivative(self, wrt, previous_grad):
         if self.node == wrt:
             return -previous_grad * Sine(self.node)
+        return 0
+
+class Tan(Node):
+    def __init__(self, node, name="Tan"):
+        super().__init__([node], name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return np.tan(self.node())
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if self.node == wrt:
+            return previous_grad * Sec(self.node)*Sec(self.node)
+        return 0
+class Cosec(Node):
+    def __init__(self, node, name="Cosec"):
+        super().__init__([node], name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return 1/(np.sin(self.node()+Node.epsilon))
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if self.node == wrt:
+            return -previous_grad * Cosec(self.node)*Cot(self.node)
+        return 0
+class Sec(Node):
+    def __init__(self, node, name="Sec"):
+        super().__init__([node], name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return 1/np.cos(self.node()+Node.epsilon)
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if self.node == wrt:
+            return previous_grad * Sec(self.node)*Tan(self.node)
+        return 0
+class Cot(Node):
+    def __init__(self, node, name="Cot"):
+        super().__init__([node], name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return 1/np.tan(self.node()+Node.epsilon)
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if self.node == wrt:
+            return -previous_grad * Cosec(self.node)*Cosec(self.node)
         return 0
 class Sigmoid(Node):
     def __init__(self, node, name="Sigmoid"):
@@ -380,6 +384,85 @@ class Sigmoid(Node):
     def _partial_derivative(self, wrt, previous_grad):
         if wrt == self.node:
             return previous_grad * self * (1 - self)
+        return 0
+class ArcSin(Node):
+    def __init__(self, node, name="ArcSin"):
+        super().__init__([node], name=name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return np.arcsin(self.node())
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if wrt == self.node:
+            return previous_grad * Recipr(Pow(1-Pow(self.node,2),0.5))
+        return 0
+class ArcCos(Node):
+    def __init__(self, node, name="ArcCos"):
+        super().__init__([node], name=name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return np.arccos(self.node())
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if wrt == self.node:
+            return -previous_grad * Recipr(Pow(1-Pow(self.node,2),0.5))
+        return 0
+class ArcTan(Node):
+    def __init__(self, node, name="ArcTan"):
+        super().__init__([node], name=name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return np.arctan(self.node())
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if wrt == self.node:
+            return previous_grad * Recipr(1+Pow(self.node,2))
+        return 0
+class ArcCot(Node):
+    def __init__(self, node, name="ArcCot"):
+        super().__init__([node], name=name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return np.arctan(1/(self.node()+Node.epsilon))
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if wrt == self.node:
+            return -previous_grad * Recipr(1+Pow(self.node,2))
+        return 0
+
+class ArcSec(Node):
+    def __init__(self, node, name="ArcSec"):
+        super().__init__([node], name=name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return np.arccos(1/(self.node()+Node.epsilon))
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if wrt == self.node:
+            return previous_grad * Recipr(Absolute(self.node)*Pow(Pow(self.node,2)-1,0.5))
+        return 0
+class ArcCosec(Node):
+    def __init__(self, node, name="ArcCosec"):
+        super().__init__([node], name=name)
+        self.node = self.children[0]
+        self.shape = self.node.shape
+
+    def _eval(self):
+        return np.arcsin(1/(self.node()+Node.epsilon))
+
+    def _partial_derivative(self, wrt, previous_grad):
+        if wrt == self.node:
+            return -previous_grad * Recipr(self.node*Pow(Pow(self.node,2)-1,0.5))
         return 0
 
 
@@ -424,9 +507,7 @@ class NormalDistribution(Node):
 def Tanh(x):
     val = Exp(-2 * x)
     return (1 - val) / (1 + val)
-@module_wrapper
-def Tan(x):
-    return Sine(x)/Cosine(x)
+
 @module_wrapper
 def Sinhx(x):
     val = Exp(x) - Exp(-x)
@@ -439,6 +520,15 @@ def Coshx(x):
 def Sechx(x):
     val = Exp(x) + Exp(-x)
     return 2/val
+@module_wrapper
+def Cosech(x):
+    val = Exp(x) - Exp(-x)
+    return 2/val
+@module_wrapper
+def Coth(x):
+    val = Exp(-2 * x)
+    return (1 + val) / (1 - val)
+
 @module_wrapper
 def SquaredDifference(x, y):
     diff = x - y
@@ -457,17 +547,28 @@ def Transpose(x):
     return Einsum("ij->ji", x)
 
 
+
 @module_wrapper
-def Softmax(x):
-    # TODO make this numerically stable by shifting by max?
-    exp = Exp(x)
-    if len(x.shape) == 1:  # workaround because numpy einsum can't broadcast? https://github.com/numpy/numpy/issues/9984
-        return exp / Einsum("i->", exp)
-    elif len(x.shape) == 2:
-        return exp / Einsum("bi,o->bo", exp, np.array([1]))
-    elif len(x.shape) == 3:
-        return exp / Einsum("abi,o->abo", exp, np.array([1]))
-    elif len(x.shape) == 4:
-        return exp / Einsum("abci,o->abco", exp, np.array([1]))
-    else:
-        raise ValueError("5D tensors not yet supported")
+def Sum1DArray(x):
+    return Einsum("i->",x)
+@module_wrapper
+def ElementwiseMul1D(x,y):
+    return Einsum("i,i->i",x,y)
+@module_wrapper
+def InnerProduct1D(x,y):
+    return Einsum("i,i->",x,y)
+@module_wrapper
+def OuterProduct1D(x,y):
+    return Einsum("i,j->ij",x,y)
+@module_wrapper
+def Trace(x):
+    return Einsum("ii",x)
+@module_wrapper
+def Diag(x):
+    return Einsum("ii->i",x)
+@module_wrapper
+def Hadamard(x,y):
+    return Einsum("ij,ij->ij",x,y)
+
+
+

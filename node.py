@@ -49,9 +49,7 @@ class Node:
         with add_context(self.name + " PD" + " wrt " + str(wrt)):
             return self._partial_derivative(wrt, previous_grad)
 
-    def plot_comp_graph(self, view=True, name="comp_graph"):
-        from ..visualization import graph_visualization
-        graph_visualization.plot_comp_graph(self, view=view, name=name)
+
 
     def __call__(self, *args, **kwargs):
         return self.eval()
