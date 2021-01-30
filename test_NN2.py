@@ -5,7 +5,7 @@ from NN_architecture_2 import *
 import pytest 
 
 def tanh(x):
-        return np.tanh(x)
+        return ad.Tanh(x)()
 
 
 

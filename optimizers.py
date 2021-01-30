@@ -1,12 +1,37 @@
+"""
+Optimizers for training the Neural Networks are defined here.
+Inheritance is used to define all the optimizers as children of parent class "optimizer"
+"""
+
+
+
+
+#Import required packages and classes from other files.
+
 import numpy as np
 import autodiff as ad
 from NN_architecture_2 import NeuralNetLSTM
 import matplotlib.pyplot as plt 
 
 class optimizer():
+    """
+    Base class /Parent class for all optimizers
+    """
     def _forward_pass(self):
+        """
+        common polymorphic method for all optimizers.
+        "_" denotes that it is private (shouldn't be accessed directly)
+        and defining it here with raising error enables it to be overriden in child classes.  
+        """
         raise NotImplementedError
     def __call__(self,params,grad_params):
+        """
+        This call invokes the private forward class method.
+        Input arguments:
+        params: The parameters which are being passed to the optimizers as list
+        grad_params: The gradients of parameters(in the same order) which are being passed to the optimizer as a list
+        returns: new parameters after forward pass based on optimization algorithm.  
+        """
         new_params = self._forward_pass(params,grad_params)
         return new_params
 
@@ -15,8 +40,23 @@ class optimizer():
 
 class SGD(optimizer):
     def __init__(self,lr=0.00146):
+        """
+        Initializer for Stochastic Gradient descent optimizer
+        Arguments: 
+        lr : The learning rate with which the gradient step should be taken(integer/float), default is 0.00146  
+
+        """
         self.lr = lr
     def _forward_pass(self,params,grad_params):
+        """
+        Takes a descent step by calculating the new parameters according to SGD update rule :
+        new parameters = parameters - learning rate * gradients
+        Inputs:
+        params: The parameters which are being passed to the optimizers as list
+        grad_params: The gradients of parameters(in the same order) which are being passed to the optimizer as a list
+        returns: new parameters after descent step  
+        
+        """
         if isinstance(params,int):
             n=1
         else:
@@ -29,6 +69,15 @@ class SGD(optimizer):
 
 class Momentum(optimizer):
     def __init__(self,num_params,lr=0.00146,gamma=0.8):
+        """
+        Initializer for momentum optimizer
+        inputs:
+        num_params: number of parameters which are ought to be passed
+        lr: The learning rate with which the gradient step should be taken(integer/float), default is 0.00146  
+        gamma: The momentum hyperparameter that accelerates the convergence towards the relevant direction and reduces the fluctuation to the irrelevant direction
+                default is 0.9 
+
+        """
         self.lr = lr
         self.num_params = num_params
         self.gamma = gamma
@@ -36,6 +85,16 @@ class Momentum(optimizer):
         self.a = [0 for _ in range(num_params)]
 
     def _forward_pass(self,params,grad_params):
+        """
+        Takes a descent step by calculating the new parameters according to Momentum update rule :
+        new a = gamma*a + gradient 
+        new parameters = parameters - learning rate * new a
+        Inputs:
+        params: The parameters which are being passed to the optimizers as list
+        grad_params: The gradients of parameters(in the same order) which are being passed to the optimizer as a list
+        returns: new parameters after descent step  
+
+        """
         new_params=[]
         for i in range(self.num_params):
             self.a[i] = self.gamma * self.a[i] + grad_params[i]
@@ -45,11 +104,27 @@ class Momentum(optimizer):
 
 class Adagrad(optimizer):
     def __init__(self,num_params,lr=0.00146):
+        """
+        Initializer for Adagrad optimizer
+        inputs:
+        num params: number of parameters which are ought to be passed
+        lr: The learning rate with which the gradient step should be taken(integer/float), default is 0.00146  
+        """
         self.lr = lr
         self.num_params = num_params
         self.runner = [0 for _ in range(num_params)]
     
     def _forward_pass(self,params,grad_params):
+        """
+        Takes a descent step by calculating the new parameters according to Adagrad update rule :
+        new runner = runner + gradient^2 
+        new parameters = parameters - learning rate/sqrt(runner) * gradients
+        Inputs:
+        params: The parameters which are being passed to the optimizers as list
+        grad_params: The gradients of parameters(in the same order) which are being passed to the optimizer as a list
+        returns: new parameters after descent step  
+
+        """
         new_params = []
         for i in range(self.num_params):
             self.runner[i] =  self.runner[i]  + grad_params[i]**2
@@ -61,6 +136,14 @@ class Adagrad(optimizer):
 
 class Adam(optimizer):
     def __init__(self,num_params,lr=0.00146,b1=0.9,b2=0.999):
+        """
+        Initializer for Adam optimizer
+        inputs:
+        num params: number of parameters which are ought to be passed
+        lr: The learning rate with which the gradient step should be taken(integer/float), default is 0.00146  
+        b1 : The exponential decay rate for the first moment(integer/float), default is 0.9
+        b2 : The exponential decay rate for the second moment(integer/float), default is 0.999
+        """
         self.counter =0
         self.lr = lr
         self.b1 = b1
@@ -69,25 +152,56 @@ class Adam(optimizer):
         self.momentum = [0 for _ in range(num_params)]
         self.velocity = [0 for _ in range(num_params)]
     def _forward_pass(self,params,grad_params):
+        """
+        Takes a descent step by calculating the new parameters according to Adam update rule :
+        new momentum = beta1*momentum + (1-beta1)*gradients
+        new velocity = beta2*velocity + (1-beta2)*gradients*gradients
+        accumulation = learning rate * sqrt(1-beta2**iteration)/(1-beta1**iteration)
+        new parameters = parameters - accumulation*new momentum/sqrt(new velocity)
+
+        Inputs:
+        params: The parameters which are being passed to the optimizers as list
+        grad_params: The gradients of parameters(in the same order) which are being passed to the optimizer as a list
+        returns: new parameters after descent step 
+        """
         new_params = []
+        self.counter += 1 
         for i in range(self.num_params):
             self.momentum[i] = self.b1 * self.momentum[i]  + (1-self.b1)*grad_params[i]
             self.velocity[i] = self.b2 * self.velocity[i]  + (1-self.b2)*grad_params[i]**2
             accumulation = self.lr * np.sqrt(1 - self.b2 ** self.counter) / (1 - self.b1 ** self.counter + 1e-8)
             new_params.append(params[i]-accumulation * self.momentum[i] / (np.sqrt(self.velocity[i]) + 1e-8))
         
-        self.counter += 1 
+        
         return new_params
 
 
 
 class RMSProp(optimizer):
     def __init__(self,num_params,lr=0.00146,decay_rate=0.9):
+        """
+        Initializer for RMSProp optimizer
+        inputs:
+        num params: number of parameters which are ought to be passed
+        lr: The learning rate with which the gradient step should be taken(integer/float), default is 0.00146  
+        decay_rate : decay rate/moving average hyper parameter (int/float), default is 0.9
+
+        """
         self.num_params = num_params
         self.lr = lr
         self.decay_rate = decay_rate
         self.runner = [0 for _ in range(num_params)]
     def _forward_pass(self,params,grad_params):
+        """
+        Takes a descent step by calculating the new parameters according to RMSProp update rule :
+        new runner = runner * decay rate + (1-decay rate)*gradients**2
+        new parameters = parameters - learning rate/sqrt(runner)*gradients
+        Inputs:
+        params: The parameters which are being passed to the optimizers as list
+        grad_params: The gradients of parameters(in the same order) which are being passed to the optimizer as a list
+        returns: new parameters after descent step 
+
+        """
         new_params = []
         for i in range(self.num_params):
             self.runner[i] =  self.decay_rate*self.runner[i]  + (1-self.decay_rate)*grad_params[i]**2
@@ -97,6 +211,14 @@ class RMSProp(optimizer):
 
 class Adamax(optimizer):
     def __init__(self,num_params,lr=0.00146,b1=0.9,b2=0.99):
+        """
+        Initializer for Adamax optimizer
+        Inputs:
+        num params: number of parameters which are ought to be passed
+        lr: The learning rate with which the gradient step should be taken(integer/float), default is 0.00146  
+        b1 : The exponential decay rate for the first moment(integer/float), default is 0.9
+        b2 : The exponential decay rate for the second moment(integer/float), default is 0.999
+        """
         self.lr = lr
         self.b1 = b1
         self.b2 = b2
@@ -105,6 +227,19 @@ class Adamax(optimizer):
         self.momentum = [0 for _ in range(num_params)]
         self.velocity = [0 for _ in range(num_params)]
     def _forward_pass(self,params,grad_params):
+        """
+        Takes a descent step by calculating the new parameters according to Adamax update rule :
+        new momentum = beta1*momentum + (1-beta1)*gradients
+        new velocity = max(velocity*beta2,normal value of gradients)
+        mhat =new momentum/(1-beta1**iteration)
+        new parameters= parameters - learning rate * mhat / new velocity
+        Inputs:
+        params: The parameters which are being passed to the optimizers as list
+        grad_params: The gradients of parameters(in the same order) which are being passed to the optimizer as a list
+        returns: new parameters after descent step 
+
+
+        """
         self.counter += 1
         epsilon = 1e-8
 
@@ -122,146 +257,3 @@ class Adamax(optimizer):
         
 
 
-def loss_calc(model):
-    def f(x):
-        return np.sin(x)
-    x= np.linspace(-1,+1,50)
-    y = f(x)
-
-
-    x= ad.Variable(x,"x")
-    x= ad.Reshape(x,(50,1))
-    y_pred = model.output(x)
-    f = y_pred - y
-    loss = ad.ReduceSumToShape(ad.Pow(f,2),())
-    return loss
-
-
-model = NeuralNetLSTM(5,0,1,1)
-
-
-optimizer=Adamax(len(model.get_weights()))
-loss_list =[]
-for i in range(1000):
-    params = model.get_weights()
-    loss = loss_calc(model)
-    print("iteration ",i)
-    loss_list.append(loss())
-    grad_params = ad.grad(loss,params)
-    new_params = optimizer([i() for i in params], [i() for i in grad_params])
-    #print(new_params)
-    model.set_weights(new_params)
-
-
-x= np.linspace(0,1000,1000)
-plt.plot(x,loss_list,label="Adamax")
-
-
-
-
-
-model = NeuralNetLSTM(5,0,1,1)
-
-
-optimizer=SGD(lr=1e-5)
-loss_list =[]
-for i in range(1000):
-    params = model.get_weights()
-    loss = loss_calc(model)
-    print("iteration ",i)
-    loss_list.append(loss())
-    grad_params = ad.grad(loss,params)
-    new_params = optimizer([i() for i in params], [i() for i in grad_params])
-    #print(new_params)
-    model.set_weights(new_params)
-
-
-x= np.linspace(0,1000,1000)
-plt.plot(x,loss_list,label="SGD")
-
-
-
-model = NeuralNetLSTM(5,0,1,1)
-
-
-optimizer=Momentum(len(model.get_weights()),lr=1e-5)
-loss_list =[]
-for i in range(1000):
-    params = model.get_weights()
-    loss = loss_calc(model)
-    print("iteration ",i)
-    loss_list.append(loss())
-    grad_params = ad.grad(loss,params)
-    new_params = optimizer([i() for i in params], [i() for i in grad_params])
-    #print(new_params)
-    model.set_weights(new_params)
-
-x= np.linspace(0,1000,1000)
-plt.plot(x,loss_list,label="Momenta")
-
-
-
-model = NeuralNetLSTM(5,0,1,1)
-
-
-optimizer=Adagrad(len(model.get_weights()))
-loss_list =[]
-for i in range(1000):
-    params = model.get_weights()
-    loss = loss_calc(model)
-    print("iteration ",i)
-    loss_list.append(loss())
-    grad_params = ad.grad(loss,params)
-    new_params = optimizer([i() for i in params], [i() for i in grad_params])
-    #print(new_params)
-    model.set_weights(new_params)
-
-x= np.linspace(0,1000,1000)
-plt.plot(x,loss_list,label="Adagrad")
-
-
-
-
-model = NeuralNetLSTM(5,0,1,1)
-
-
-optimizer=RMSProp(len(model.get_weights()))
-loss_list =[]
-for i in range(1000):
-    params = model.get_weights()
-    loss = loss_calc(model)
-    print("iteration ",i)
-    loss_list.append(loss())
-    grad_params = ad.grad(loss,params)
-    new_params = optimizer([i() for i in params], [i() for i in grad_params])
-    #print(new_params)
-    model.set_weights(new_params)
-
-x= np.linspace(0,1000,1000)
-plt.plot(x,loss_list,label="RMSProp")
-
-
-
-model = NeuralNetLSTM(5,0,1,1)
-
-
-optimizer=Adam(len(model.get_weights()))
-loss_list =[]
-for i in range(1000):
-    params = model.get_weights()
-    loss = loss_calc(model)
-    print("iteration ",i)
-    loss_list.append(loss())
-    grad_params = ad.grad(loss,params)
-    new_params = optimizer([i() for i in params], [i() for i in grad_params])
-    #print(new_params)
-    model.set_weights(new_params)
-
-x= np.linspace(0,1000,1000)
-plt.plot(x,loss_list,label="Adam")
-plt.legend()
-plt.show()
-
-
-
-        

@@ -24,15 +24,13 @@ def xavier(input_dim,output_dim):
 
 
     return np.array(value)
-"""
+
 """
 def xavier(input_dim,output_dim):
     stddev = np.sqrt(2/(input_dim+output_dim))
     return np.random.normal(loc=0.0,scale=stddev,size=(input_dim,output_dim))
-"""
 
-def xavier(input_dim,output_dim):
-    return np.ones((input_dim,output_dim))
+
 
 class lstm_layer():
 
@@ -191,10 +189,10 @@ def loss_domain(model,points):
 
     return total_loss
 if __name__ == "__main__":
-    model = NeuralNetLSTM(5,1,2,1)
-    print(model.output(np.array([[0,1]])))
+    model = NeuralNetLSTM(10,1,1,1)
+    print([i() for i in model.get_weights()])
     
-    print(model.output(np.array([[0,1]])))
+    #print(model.output(np.array([[0,1]])))
 
     
 

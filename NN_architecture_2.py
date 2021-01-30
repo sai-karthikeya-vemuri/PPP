@@ -24,13 +24,14 @@ def xavier(input_dim,output_dim):
 
 
     return np.array(value)
+
 """
 """
 def xavier(input_dim,output_dim):
     stddev = np.sqrt(2/(input_dim+output_dim))
     return np.random.normal(loc=0.0,scale=stddev,size=(input_dim,output_dim))
-"""
 
+"""
 def xavier(input_dim,output_dim):
     return np.ones((input_dim,output_dim))
 
@@ -120,10 +121,10 @@ class NeuralNetLSTM():
         
     
     def set_weights(self,params_of_layers):
-        #self._W.value = params_of_layers[0]()
-        self._B.value = params_of_layers[0]
+        self._W.value = params_of_layers[0]
+        self._B.value = params_of_layers[1]
         layer_params =[]
-        iter = 1
+        iter = 2
         
 
         for i in range(self.number_of_layers + 1):
@@ -134,7 +135,7 @@ class NeuralNetLSTM():
         self._Bf.value = params_of_layers[-1]
     def get_weights(self):
         return_params = []
-        #return_params.append(self._W)
+        return_params.append(self._W)
         return_params.append(self._B)
         for i in range(self.number_of_layers + 1):
             return_params = return_params + (self.layers[i].get_weights_layer())
