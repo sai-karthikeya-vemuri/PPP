@@ -1,3 +1,11 @@
+"""
+This file contains all the  test cases checking the functionality of all the operations defined in the ops.py file
+All the tests can be run by command "pytest tests_ops.py"
+
+"""
+
+
+#Import required packages
 import pytest
 import numpy as np 
 from autodiff.core.ops import *
@@ -8,12 +16,25 @@ from autodiff.core.grad import grad
 
 
 def test_ReduceSumToShape1_as_scalar():
+    """
+    Aim: Test whether ReduceSumToShape(which is a wrapper of ReduceSumKeepDims) exactly reduces an array to a scalar
+    Expected Result: 25
+    Obtained Result: 25
+    Remarks:None
+    """
     X= np.ones((5,5))
     X = Variable(X,"X")
     val = ReduceSumToShape(X,())
     assert val() == 25 and isinstance(val,ReduceSumKeepDims)
 
 def test_ReduceSumToShape2_as_column():
+    """
+    Aim: Test whether ReduceSumToShape(which is a wrapper of ReduceSumKeepDims) exactly reduces an array to a column vector
+    Expected Result: [5,5,5,5,5]
+    Obtained Result: [5,5,5,5,5]
+    Remarks:None
+
+    """
     X = np.ones((5,5))
     X = Variable(X,"X")
     val = ReduceSumToShape(X,(5,))
@@ -23,6 +44,12 @@ def test_ReduceSumToShape2_as_column():
 
 
 def test_ReduceSumToShape3_as_row():
+    """
+    Aim: Test whether ReduceSumToShape(which is a wrapper of ReduceSumKeepDims) exactly reduces an array into a single row
+    Expected Result: [[5,5,5,5,5]]
+    Obtained Result: [[5,5,5,5,5]]
+    Remarks:None
+    """
     X = np.ones((5,5))
     X = Variable(X,"X")
     val = ReduceSumToShape(X,(1,5))
@@ -31,6 +58,12 @@ def test_ReduceSumToShape3_as_row():
     assert flag == True and isinstance(val,ReduceSumKeepDims)
 
 def test_add1_2equal():
+    """
+    Aim:Test addition operation (if the value is correct and derivatives are passed as expected) 
+    Expected Result:Add: [[2,4],[8,10]] dzdx=dzdy=[[1,1],[1,1]]
+    Obtained Result:[[2,4],[8,10]]
+    Remark: For the case where two variables are of same shape
+    """
     x = np.array([[1,2],[4,5]])
     y = np.array([[1,2],[4,5]])
     X = Variable(x,"X")
@@ -43,6 +76,13 @@ def test_add1_2equal():
 
 
 def test_add2_matrix_vector():
+    """
+    Aim:Test addition operation (if the value is correct and derivatives are passed as expected) 
+    Expected Result:add = [[2,3][5,6]] and dzdx=[2,2],dzdy=[[1,1],[1,1]]
+    Obtained Result:
+    Remarks: For the case where one variable is matrix and other is 1D-vector
+
+    """
     x = np.ones((2,))
     y = np.array([[1,2],[4,5]])
     Z = x+y
@@ -59,6 +99,14 @@ def test_add2_matrix_vector():
 
 
 def test_add3_matrix_vector_fractions():
+    """
+    Aim:Test addition operation (if the value is correct and derivatives are passed as expected) 
+    Expected:[ 2.,  3.],
+             [-3.,  1.00324465]] and dzdx=[[2,2]] dzdy=[[1,1],[1,1]]
+    Obtained:[ 2.,  3.],
+             [-3.,  1.00324465]] and dzdx=[[2,2]] dzdy=[[1,1],[1,1]]
+    Remarks: For a 2D array and another 2D array as a row vector
+    """
     x = (np.ones((1,2)))
     y = np.array([[1,2.0],[-4,5/1541]])
     Z = x+y
@@ -73,6 +121,13 @@ def test_add3_matrix_vector_fractions():
 
 
 def test_add4_irrational():
+    """
+    Aim:Test addition operation (if the value is correct and derivatives are passed as expected) 
+    Expected:add=13.141592653589793 dzdx=dzdy=1
+    Obtained:add=13.141592653589793 dzdx=dzdy=1
+    Remark: This test case ascertains the behaviour of Add when irrational numbers are passed and derivatives are also passed as expected 
+
+    """
     x = np.pi
     y = 10
     Z = x+y
@@ -93,6 +148,12 @@ def test_add5_complex_meant_to_fail():
     assert  isinstance(Y,TypeError)
 """
 def test_Mul1_irrational():
+    """
+    Aim:Test the Mul operation (if the value is correct and derivatives are passed as expected) 
+    Expected:pi ,dzdx=pi,dzdy=1
+    Obtained:pi,dzdx=pi,dzdy=1
+    Remark:multiplying an irrational integer to check robustness of kernel 
+    """
     x = 1
     y = np.pi
     Z = x*y
@@ -103,6 +164,12 @@ def test_Mul1_irrational():
     assert isinstance(Z1,Mul) and Z1()==np.pi and dzdx()==y and dzdy()==x
 
 def test_Mul2_matrix_scalar():
+    """
+    Aim:Test the Mul operation (if the value is correct and derivatives are passed as expected) 
+    Obtained: [[3 6],[6 6]] and dzdx=[[3 3] [3 3]] , dzdy=7 
+    Expected: [[3 6],[6 6]] and dzdx=[[3 3] [3 3]] , dzdy=7 
+    Remarks: Multiplying a scalar with an array to check that derivatives are broadcasted correctly
+    """
     x = np.array([[1,2],[2,2]])
     y = 3
     
@@ -118,6 +185,16 @@ def test_Mul2_matrix_scalar():
 
 
 def test_Mul3_matrix_vector():
+    """
+    Aim:Test the Mul operation (if the value is correct and derivatives are passed as expected)
+    Obtained: mul=[[1 0][0 0]]    and dzdy=[[1 0] [1 0]]dzdx=[1,0.423310825130748]
+    Expected: mul=[[1 0][0 0]]    and dzdy=[[1 0] [1 0]]dzdx=[1,0.423310825130748]
+
+
+    Remarks: Multiplying a scalar with a vector to check that derivatives are broadcasted correctly
+
+
+    """
     x = np.array([1,0])
     y = np.array([[1,np.pi],[0,-np.exp(1)]])
     Z = x*y
@@ -130,12 +207,24 @@ def test_Mul3_matrix_vector():
     assert isinstance(Z1,Mul) and np.array_equal(Z1(),Z)==True and np.array_equal(dzdy(),np.array([[1.,0.],[1.,0.]])) and np.array_equal(dzdx(),np.array([1,np.pi-np.exp(1)]))
 
 def test_Negate_zero():
+    """
+    Aim: To check the negation operation((if the value is correct and derivatives are passed as expected))
+    Expected: 0, dydx = -1
+    Obtained:0, dydx = -1
+    Remarks:This is a typical case , because the negation of zero is itself but the gradient passed should change it's sign.
+    """
     X = Variable(0,"X")
     Y = Negate(X)
     dy = grad(Y,[X])[0]
     assert isinstance(Y,Negate) and Y()==0 and dy()==-1
 
 def test_Negate_array():
+    """
+    Aim: To check the negation operation((if the value is correct and derivatives are passed as expected))
+    Expected: [[-np.pi,-2.0],[+3,-4.2222222]], dydx = [[-1 -1][-1 -1]]
+    Obtained:[[-np.pi,-2.0],[+3,-4.2222222]], dydx =  [[-1 -1][-1 -1]]
+    Remarks: taking all possible types of numbers and negating them
+    """
     x = np.array([[np.pi,2.0],[-3,4.2222222]])
     X = Variable(x,"X")
     Y = Negate(X)
@@ -145,6 +234,12 @@ def test_Negate_array():
     assert isinstance(Y,Negate) and np.array_equal(Y(),-1*x) == True and np.array_equal(dy(),np.full((2,2),-1.)) 
 
 def test_recipr_scalar():
+    """
+    Aim: To test the operation Reciprocal(which basically does element-wise reciprocal) 
+    Obtained: 0.19999999999996 and dy = -0.04
+    Expected: 0.2 and dy = -0.04
+    Remarks: This small deviation marks the distinctive feature employed in all the operations which might have to deal with unwanted infinities. In this case division by zero is avoided by adding a very small innate error of 1e-12 
+    """
     x= 5
     X = Variable(x,"X")
     Y= Recipr(X)
@@ -155,6 +250,14 @@ def test_recipr_scalar():
     assert isinstance(Y,Recipr) and np.abs(Y() - (1/(5+1e-12))) < 0.0000001 and np.abs(dy()  - np.array(-0.04)) < 0.000000001
 
 def test_recipr_irrational_array():
+    """
+    Aim:To test the operation Reciprocal(which basically does element-wise reciprocal) 
+    Expected:[[0.31830989, 0.31818182], dy = [[1.01321184e-01, 1.01239669e-01],
+       [2.71828183, 0.082085  ]]                [7.38905610e+00, 6.73794700e-03]]
+    Obtained:[[0.31830989, 0.31818182],    dy= [[1.01321184e-01, 1.01239669e-01],
+              [2.71828183, 0.082085  ]]        [7.38905610e+00, 6.73794700e-03]]
+    Remarks:Deviation due to buffer avoiding infinities and invoking itself  for passage of derivatives is also tested. 
+    """
     x = np.array([[np.pi,22/7],[np.exp(-1),np.exp(2.5)]])
     X = Variable(x,"X")
     Y = Recipr(X)
@@ -165,18 +268,37 @@ def test_recipr_irrational_array():
     assert isinstance(Y,Recipr) and np.array_equal(Y(),np.reciprocal(x+1e-12)) and np.all(np.less(np.abs(dy()+np.reciprocal((x+1e-12)*(x+1e-12))) , np.full_like(dy(),0.0000001)))
 
 def test_einsum_onearg_identity():
+    """
+    Aim:To test the operation Einsum
+    Expected: random array of shape (2,3,5,7)
+    Obtained: the same random array of shape (2,3,5,7)
+    Remarks: Same indices on both sides of arrow of an einsum means Identity wrapper of einsum is tested here
+    """
     X = np.random.randn(2,3,5,7)
     Xv = Variable(X,"Xv")
     Z = Einsum("ijkl->ijkl",Xv)
     assert isinstance(Z,Einsum) and np.array_equal(Z(),X) == True
 
 def test_einsum_onearg_sum_1axis():
+    """
+    Aim:To test the operation Einsum
+    Expected: contracted random array(4th order tensor ) along the last dimension
+    Obtained: contracted random array(4th order tensor ) along the last dimension
+    Remarks: this test  tests the single contraction of a 4th order tensor with itself(i.e reduce sum keep dimensions 1,2,3) 
+
+    """
     X = np.random.randn(2,3,5,7)
     Xv = Variable(X,"Xv")
     Z = Einsum("ijkl->ijk",Xv)
     assert isinstance(Z,Einsum) and np.array_equal(Z(),np.einsum("ijkl->ijk",X)) == True
 
 def test_einsum_onearg_sum_2axis():
+    """
+    Aim:To test the operation Einsum 
+    Expected: contracted array along the last two dimensions
+    Obtained: contracted array along the last two dimensions
+    Remarks: this test tests double contraction of a 4th order tensor with itself(i.e reduce sum keep dimensions 1,2) 
+    """
     X = np.random.randn(2,3,5,7)
     Xv = Variable(X,"Xv")
     Z = Einsum("ijkl->ij",Xv)
@@ -184,18 +306,39 @@ def test_einsum_onearg_sum_2axis():
 
 
 def test_einsum_onearg_sum_3axis():
+    """
+    Aim:To test the operation Einsum 
+    Expected: contracted array along the last three dimensions
+    Obtained: contracted array along the last three dimensions
+    Remarks: this test tests the triple contraction of a 4th order tensor with itself(i.e reduce sum keep dimensions 1) 
+    """
     X = np.random.randn(2,3,5,7)
     Xv = Variable(X,"Xv")
     Z = Einsum("ijkl->i",Xv)
     assert isinstance(Z,Einsum) and np.array_equal(Z(),np.einsum("ijkl->i",X)) == True
 
 def test_einsum_onearg_sum_allaxis():
+    """
+    Aim:To test the operation Einsum 
+    Expected:contracted array along the last all dimensions
+    Obtained:contracted array along the last all dimensions
+    Remarks: this tests einsum as reduce sum keep dims none 
+
+    """
     X = np.random.randn(2,3,5,7)
     Xv = Variable(X,"Xv")
     Z = Einsum("ijkl->",Xv)
     assert isinstance(Z,Einsum) and np.array_equal(Z(),np.einsum("ijkl->",X)) == True
 
 def test_einsum_matmul():
+    """
+    Aim:To test the operation Einsum (Value and its derivatives)
+    Expected: z=[[ 433,  344], dzdx = [[115, 108] dzdy =[[55, 55],
+               [3452, 3176]]         [115, 108]]       [10, 10]]
+    obtained:z=[[ 433,  344],  dzdx = [[115, 108], dzdy=[[55, 55],
+              [3452, 3176]]          [115, 108]]        [10, 10]]
+    Remarks: This tests usage of Einsum for matrix multiplication(tests the wrapper function Wrapper Matmul)
+    """
 
     x = np.array([[3,4],[52,6]])
     y = np.array([[59,56],[64,44]])
@@ -208,6 +351,14 @@ def test_einsum_matmul():
         and np.array_equal(dzdy(),np.einsum("ij,jk->jk",x,np.ones_like(z)))
 
 def test_einsum_matmul3():
+    """
+    Aim:To test the operation Einsum (Value and its derivatives)
+    Expected: z=[[ 51503,  43169], dzdx =[[20928,  7972], dzdy=[[11000,  8965]  dzdw =[[3285, 3285],
+                 [673332, 462756]]        [20928,  7972]]       [ 2000,  1630]]        [3520, 3520]]
+    Obtained: z=[[ 51503,  43169],  dzdx =[[20928,  7972], dzdy=[[11000,  8965]  dzdw= [[3285, 3285],
+                [673332, 462756]]          [20928,  7972]]       [ 2000,  1630]]         [3520, 3520]]
+    Remarks: This test tests usage of einsum for multplication of 3 matrices 
+    """
     x = np.array([[3,4],[52,6]])
     y = np.array([[59,56],[4,44]])
     w = np.array([[151,49],[65,98]])
@@ -224,6 +375,15 @@ def test_einsum_matmul3():
 
 
 def test_einsum_different_indices():
+    """
+    Aim:To test the operation Einsum (Value and its derivatives)
+    Expected: third order tensor and second order derivatives obtained by outer product of three second order tensors
+
+    Obtained: third order tensor and second order derivatives obtained by outer product of three second order tensors
+    
+    Remarks: This test tests usage of einsum for outer product of three second order tensors to get third order tensor
+
+    """
     x = np.array([[3,4],[52,6]])
     y = np.array([[59,54],[44,84]])
     w = np.array([[11,29],[75,9]])
@@ -237,6 +397,14 @@ def test_einsum_different_indices():
         and np.array_equal(dzdy(),np.einsum("ij,ijl,kl->jk",x,np.ones_like(z),w)) and np.array_equal(dzdw(),np.einsum("ij,jk,ijl->kl",x,y,np.ones_like(z)))
 
 def test_einsum_4thorder():
+    """
+    Aim:To test the operation Einsum (Value and its derivatives)
+    Expected: fourth order tensor and second order derivatives obtained by outer product of three second order tensors
+    Obtained: fourth order tensor and second order derivatives obtained by outer product of three second order tensors
+    Remarks: This test tests usage of einsum for outer product of three second order tensors to get fourth order tensor
+
+
+    """
     x = np.array([[35,24],[52,6]])
     y = np.array([[59,56],[44,44]])
     w = np.array([[11,45],[75,28]])
@@ -251,6 +419,12 @@ def test_einsum_4thorder():
 
 
 def test_pow_scalar():
+    """
+    Aim: Test the operation power(value and derivatives)
+    Expected: val = 9 and dy =6
+    Obtained: val = 9 and dy =6
+    Remarks: tests specific x**n situation n being a scalar whose derivative will be n*x**n-1
+    """
     x = 3
     y = 3**2
     X = Variable(x,"X")
@@ -260,6 +434,14 @@ def test_pow_scalar():
     assert isinstance(Y,Pow) and Y()==9 and dy()==6
 
 def test_pow_scalar_irrational():
+    """
+    Aim: Test the operation power(value and derivatives)
+    Obtained:val= 0.03170146783514191 ,dy = -0.03319769948629831
+    Expected:val = 0.03170146783514191, dy = -0.03319769948629831
+    Remarks: tests specific x**n stuation n being an irrational number.
+
+
+    """
     x = 3
     y = 3**-np.pi
     X = Variable(x,"X")
@@ -269,6 +451,12 @@ def test_pow_scalar_irrational():
 
     assert isinstance(Y,Pow) and Y()==y and dy()==-np.pi*3**(-np.pi-1)
 def test_pow_array_with_scalar():
+    """
+    Aim: Test the operation power(value and derivatives)
+    obtained: value is element wise squared of a random array,derivative is 2*random array 
+    Expected: value is element wise squared of a random array,derivative is 2*random array 
+    Remarks: tests how pow operation for a higher dimensional array
+    """
     x = np.random.rand(3,3,3)
     y = x**2
     X = Variable(x,"X")
@@ -279,6 +467,13 @@ def test_pow_array_with_scalar():
     assert isinstance(Y,Pow) and np.array_equal(Y(),y) and np.array_equal(dy(),2*x)
 
 def test_pow_array_with_itself():
+    """
+    Aim: Test the operation power(value and derivatives)
+    Expected: Each value in third order tesnor raised to itself , derivative is additionally multiplied with log of value 
+    Obtained:Each value in third order tesnor raised to itself, derivative is very slightly less than expected 
+    Remarks: tests how pow operation works for type x**x whose derivative is x**x*log(x) and the slight deviation is result of avoiding the unwanted infinities in log .
+
+    """
     x = np.random.rand(3,3,3)
     y = x**x
     
@@ -293,6 +488,12 @@ def test_pow_array_with_itself():
     assert isinstance(Y,Pow) and np.array_equal(Y(),y) and np.array_equal(dy(),(x**x)*(np.log(x+1e-12)+1))
 
 def test_pow_array_with_another():
+    """
+    Aim:Test the operation power(value and derivatives)
+    Expected:Each value in third order tesnor raised to another value of another tensor with same index , derivative is additionally multiplied with log of value 
+    Obtained:Each value in third order tesnor raised to another value of another tensor with same index , derivative is additionally multiplied with log of value , small deviation due to avoiding infinities.
+    Remarks: tests both scenarios x**a and a**x and derivatives
+    """
     x = np.random.rand(4,4,4)
     z = np.random.rand(4,4,4)
     X = Variable(x,"X")
@@ -309,6 +510,12 @@ def test_pow_array_with_another():
 
 
 def test_log_scalar():
+    """
+    Aim: test the log operation(value and derivative)
+    Expected: 1.6094379124341003 and dy = 0.2 
+    Obtained: 1.6094379124343003 and dy = 0.20000000000100002
+    Remarks: The slight deviation is caused by a very small value added during the operation to avoid infinities
+    """
     x = 5 
     y = np.log(x+1e-12)
     X = Variable(x,"X")
@@ -317,6 +524,12 @@ def test_log_scalar():
     assert isinstance(Y,Log) and Y()==y and dy()==1/(5+1e-12)
 
 def test_log_0():
+    """
+    Aim: test the log operation(value and derivative)
+    Expected: Not defined/Does not exist
+    Obtained: -27.631021115928547 and dy = 10000000000000
+    Remarks: This shows the anomalous behaviour at discontinuities , they are avoided by adding a very small number.This is employed because they are more likely to occur in NN and discontinuites need to be dealt with.
+    """
     x = 0 
     y = np.log(x+1e-12)
     X = Variable(x,"X")
