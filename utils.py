@@ -1,3 +1,12 @@
+"""
+The function to actually layout the computational graph
+
+CITATION: This function is directly taken from "https://github.com/bgavran/autodiff"
+
+"""
+
+
+
 def reverse_topo_sort(top_node):
     """
     Returns a list of nodes in the top_node subtree, sorted in the reverse topological order.

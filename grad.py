@@ -1,3 +1,13 @@
+"""
+Grad function to collect all the partial derivatives and get the gradient
+
+
+CITATION: This function is directly taken from "https://github.com/bgavran/autodiff"
+"""
+
+
+
+#Import required packages
 import functools
 import numpy as np
 import collections

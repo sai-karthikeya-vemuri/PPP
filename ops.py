@@ -1,3 +1,14 @@
+"""
+This file contains the operations which are going to be used in this Automatic Differentiation framework.
+Every operation is a child of Node and overrides the virtual eval and partial derivative methods according to their implementation   
+All the classes have the same outline .
+->The __init__ method initializes the nodes and calls the parent __init__ method. 
+->The partial derivative and eval method overrides the corresponding virtual methods according to their implementations 
+CITATION: The classes Add,Mul,Einsum,function ReduceSumToShape are directly taken from "https://github.com/bgavran/autodiff"
+"""
+
+
+#Import required packages
 import re
 import numpy as np
 import numbers
@@ -7,8 +18,16 @@ from .reshape import ReduceSumKeepDims
 from functools import reduce
 from string import ascii_lowercase
 
-
+#
 def module_wrapper(fn):
+    """
+    defining a module wrapper to wrap in context
+    helps to keep track of new nodes formed and partial derivatives calculation
+    parameters:
+    fn: function 
+    returns a method which returns a functional value wrapped in context
+
+    """
     def wrap_in_context(*args, **kwargs):
         with add_context(fn.__name__):
             return fn(*args, **kwargs)
@@ -17,10 +36,25 @@ def module_wrapper(fn):
 
 
 def letters_from_tuple(tpl):
+    """
+    a small function to get the lower case letters for einsum
+    params:
+    tuple of letters
+    returns lower case of letters 
+    eg: length is 1 , we get 'a' ,2 'b' and so on
+
+
+    """
     return ascii_lowercase[:len(tpl)]
 
 
 def shape_from_elems(*elems):
+    """
+    function which broadcasts a list of elements into a single shape and gives that shape as output  
+    params:
+    elems: list of elements 
+    returns broadcasted shape
+    """
     if len(elems) == 0:
         return 1,
     return np.broadcast(*[np.ones(elem.shape) for elem in elems]).shape
@@ -28,6 +62,13 @@ def shape_from_elems(*elems):
 
 @module_wrapper
 def ReduceSumToShape(tensor, to_shape):
+    """
+    function which uses Reduce Sum keep Dims class from Reshape. 
+    params:
+    tensor: basically the array whose dimensions need  to be reduced 
+    to_shape: required output shape 
+    returns array with required shape 
+    """
     if tensor.shape == to_shape:
         return tensor
     previous_grad_letters = letters_from_tuple(tensor.shape)
@@ -42,6 +83,10 @@ def ReduceSumToShape(tensor, to_shape):
 
 
 class Add(Node):
+    """
+    Operation Add which adds two or more Nodes. 
+
+    """
     def __init__(self, *elems, name="Add"):
         if not elems:
             name = "0-" + name
@@ -62,6 +107,9 @@ class Add(Node):
 
 
 class Mul(Node):
+    """
+    Operation which multiplies two nodes (a simple '*' equivalent)
+    """
     fn = lambda x, y: x * y
 
     def __init__(self, *elems, name="Mul"):
@@ -87,6 +135,9 @@ class Mul(Node):
 
 
 class Negate(Node):
+    """
+    Operation which does Negation on a Node
+    """
     def __init__(self, node, name="Negate"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -103,6 +154,10 @@ class Negate(Node):
 
 
 class Recipr(Node):
+    """
+    Elementwise reciprocal operation
+    """
+
     def __init__(self, node, name="Reciprocal"):
         """
         Elementwise reciprocal
@@ -122,6 +177,10 @@ class Recipr(Node):
 
 
 class Einsum(Node):
+    """
+    Einstein Summation operation: Instead of individually defining all the matrix,tensor and vector operations , it is elegant to define one EinSum of
+    and add wrappers to all the known operations because Einsum encompasses all possible matrix, tensor , vector operations
+    """
     def __init__(self, op_str, *operands, name="EinSum"):
         super().__init__(list(operands), name + " " + op_str)
         # TODO ellipsis currently can't be in the middle of op_letters!
@@ -219,6 +278,9 @@ class Einsum(Node):
 
 
 class Pow(Node):
+    """
+    Operation which does power of one node with other
+    """
     def __init__(self, first, second, name="Pow"):
         super().__init__([first, second], name)
         self.first = self.children[0]
@@ -239,6 +301,9 @@ class Pow(Node):
 
 
 class Log(Node):
+    """
+    Operation which takes logarithm of a node (similar to np.log())
+    """
     def __init__(self, node, name="Log"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -254,6 +319,9 @@ class Log(Node):
 
 
 class Identity(Node):
+    """
+    Operation which actually does nothing to the node but forms a back-end gradient of same shape  
+    """
     def __init__(self, node, name="Identity"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -267,6 +335,9 @@ class Identity(Node):
             return previous_grad
         return 0
 class Absolute(Node):
+    """
+    Operation which gives absolute value of a node
+    """
     def __init__(self, node, name="Absolute"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -281,6 +352,9 @@ class Absolute(Node):
         return 0
 
 class Exp(Node):
+    """
+    Operation which gives exponential value of a node (like np.exp())
+    """
     def __init__(self, node, name="Exp"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -294,6 +368,9 @@ class Exp(Node):
             return previous_grad * self
         return 0
 class Sine(Node):
+    """
+    Operation which gives sine of a node (like np.sin()) 
+    """
     def __init__(self, node, name="Sine"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -307,6 +384,9 @@ class Sine(Node):
             return previous_grad * Cosine(self.node)
         return 0
 class Cosine(Node):
+    """
+    Operation which gives cosine of a node (like np.cos())
+    """
     def __init__(self, node, name="Cosine"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -321,6 +401,11 @@ class Cosine(Node):
         return 0
 
 class Tan(Node):
+    
+    """
+    Operation which gives tan of a node (like np.tan())
+    """
+
     def __init__(self, node, name="Tan"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -334,6 +419,9 @@ class Tan(Node):
             return previous_grad * Sec(self.node)*Sec(self.node)
         return 0
 class Cosec(Node):
+    """
+    Operation which gives cosecant of a node
+    """
     def __init__(self, node, name="Cosec"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -347,6 +435,9 @@ class Cosec(Node):
             return -previous_grad * Cosec(self.node)*Cot(self.node)
         return 0
 class Sec(Node):
+    """
+    Operation which gives secant of a node
+    """
     def __init__(self, node, name="Sec"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -360,6 +451,9 @@ class Sec(Node):
             return previous_grad * Sec(self.node)*Tan(self.node)
         return 0
 class Cot(Node):
+    """
+    Operation which gives cosecant of a node
+    """
     def __init__(self, node, name="Cot"):
         super().__init__([node], name)
         self.node = self.children[0]
@@ -373,6 +467,9 @@ class Cot(Node):
             return -previous_grad * Cosec(self.node)*Cosec(self.node)
         return 0
 class Sigmoid(Node):
+    """
+    Operation which gives sigmoid value of a node
+    """
     def __init__(self, node, name="Sigmoid"):
         super().__init__([node], name=name)
         self.node = self.children[0]
@@ -386,6 +483,9 @@ class Sigmoid(Node):
             return previous_grad * self * (1 - self)
         return 0
 class ArcSin(Node):
+    """
+    Operation which gives ArcSin of a node ,whose value must lie between -1 and 1
+    """
     def __init__(self, node, name="ArcSin"):
         super().__init__([node], name=name)
         self.node = self.children[0]
@@ -399,6 +499,10 @@ class ArcSin(Node):
             return previous_grad * Recipr(Pow(1-Pow(self.node,2),0.5))
         return 0
 class ArcCos(Node):
+    """
+    Operation which gives Arccos of a node,whose value must lie between -1 and 1 
+    """
+
     def __init__(self, node, name="ArcCos"):
         super().__init__([node], name=name)
         self.node = self.children[0]
@@ -412,6 +516,9 @@ class ArcCos(Node):
             return -previous_grad * Recipr(Pow(1-Pow(self.node,2),0.5))
         return 0
 class ArcTan(Node):
+    """
+    Operation which gives ArcTan value of a node, whose value can lie anywhere between -inf and +inf
+    """
     def __init__(self, node, name="ArcTan"):
         super().__init__([node], name=name)
         self.node = self.children[0]
@@ -425,6 +532,9 @@ class ArcTan(Node):
             return previous_grad * Recipr(1+Pow(self.node,2))
         return 0
 class ArcCot(Node):
+    """
+    Operation which gives Arccot value of a node, whose value can be anything 
+    """
     def __init__(self, node, name="ArcCot"):
         super().__init__([node], name=name)
         self.node = self.children[0]
@@ -439,6 +549,9 @@ class ArcCot(Node):
         return 0
 
 class ArcSec(Node):
+    """
+    Operation which gives Arcsec value of a node , whose value can be anything except between -1 and 1
+    """
     def __init__(self, node, name="ArcSec"):
         super().__init__([node], name=name)
         self.node = self.children[0]
@@ -452,6 +565,9 @@ class ArcSec(Node):
             return previous_grad * Recipr(Absolute(self.node)*Pow(Pow(self.node,2)-1,0.5))
         return 0
 class ArcCosec(Node):
+    """
+    Operation which gives Arccosec value of a node, whose value can be anything except between -1 and 1
+    """
     def __init__(self, node, name="ArcCosec"):
         super().__init__([node], name=name)
         self.node = self.children[0]
@@ -466,43 +582,10 @@ class ArcCosec(Node):
         return 0
 
 
-class FrobeniusNorm(Node):
-    def __init__(self, *nodes, name="Frobenius Norm"):
-        super().__init__(list(nodes), name=name)
-        self.nodes = self.children
-        self.shape = 1,
 
-    def _eval(self):
-        return np.sqrt(sum([np.sum(np.square(node())) for node in self.nodes]))
-
-    def _partial_derivative(self, wrt, previous_grad):
-        try:
-            loc = self.nodes.index(wrt)
-        except ValueError:
-            return 0
-        return previous_grad * self.nodes[loc] / self
-
-
-class NormalDistribution(Node):
-    def __init__(self, node, mean=0, variance=1, name="Normal Distribution"):
-        super().__init__([node], name=name)
-        self.node = self.children[0]
-        self.mean = mean
-        self.variance = variance
-        self.shape = self.node.shape
-
-    def _eval(self):
-        node_val = self.node()
-        m = self.mean
-        v = self.variance
-        return 1 / np.sqrt(2 * np.pi * (v ** 2)) * np.exp(-(node_val - m) ** 2 / (2 * v ** 2))
-
-    def _partial_derivative(self, wrt, previous_grad):
-        if self.node == wrt:
-            return -previous_grad * self.node * self
-        return 0
-
-
+"""
+Below are module wrappers defining all the hyperbolic trigonometric functions
+"""
 @module_wrapper
 def Tanh(x):
     val = Exp(-2 * x)
@@ -533,6 +616,13 @@ def Coth(x):
 def SquaredDifference(x, y):
     diff = x - y
     return diff * diff
+
+
+"""
+Below are some important matrix and tensor operations defined as module wrappers around Einsum
+Not a complete list but enncompasses the important ones
+"""
+
 @module_wrapper
 def MatMulV(x,y):
     return Einsum("j,ij->j",x,y)
@@ -562,7 +652,7 @@ def OuterProduct1D(x,y):
     return Einsum("i,j->ij",x,y)
 @module_wrapper
 def Trace(x):
-    return Einsum("ii",x)
+    return Einsum("ii->",x)
 @module_wrapper
 def Diag(x):
     return Einsum("ii->i",x)
