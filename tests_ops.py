@@ -537,6 +537,12 @@ def test_log_0():
     dy = grad(Y,[X])[0]
     assert isinstance(Y,Log) and Y()==y and dy()==1/1e-12
 def test_log_array():
+    """
+    Aim: Test the log operation(value and derivative)
+    Expected: np.log of the array
+    Obtained: np.log(array+1e-12)
+    Remarks: The small error constitutes weight to avoid infinities
+    """
     x = np.array([[np.pi,np.exp(1)],[232,848]])
     y = np.log(x+1e-12)
     X = Variable(x,"X")
@@ -548,6 +554,12 @@ def test_log_array():
     assert isinstance(Y,Log) and np.array_equal(Y(),y) and np.array_equal(dy(),1/(x+1e-12))
 
 def test_identity():
+    """
+    Aim: Test the identity function (function and derivative)
+    Expected: The same function which is passed as argument
+    Obtained:The same function which is passed as argument
+    Remarks: Sometimes derivatives musr also pass without any changes , This Identity is used in such conditions
+    """
     x = np.array([[np.pi,np.exp(1)],[232.3864641,-84.448]])
     X = Variable(x,"X")
     y = Identity(X)
@@ -558,6 +570,13 @@ def test_identity():
     assert isinstance(y,Identity) and np.array_equal(x,y()) and np.array_equal(dy(),np.full_like(x,1.))
 
 def test_exp_scalar():
+    """
+    Aim: Test the exponent function (value and derivative)
+    Expected: exp(5) 
+    Obtained:exp(5)
+    Remarks: The derivative of exp(x) is again exp(x)
+
+    """
     x = 5 
     y = np.exp(x)
     X = Variable(x,"X")
@@ -565,6 +584,12 @@ def test_exp_scalar():
     dy=grad(Y,[X])[0]
     assert isinstance(Y,Exp) and Y()==y and dy()==y
 def test_exp_array():
+    """
+    Aim: Test the exponent function(value and derivative)
+    Expected: exp(array)
+    Obtained: exp(array)
+    Remarks: The derivative is equal to value 
+    """
     x = np.random.rand(2,2)
     y = np.exp(x)
     X = Variable(x,"X")
@@ -574,6 +599,12 @@ def test_exp_array():
 
 
 def test_sine_scalar():
+    """
+    Aim: test the sine function(value and derivative)
+    Expected:1
+    Obtained:1
+    Remarks: Exact derivatives are obtained because of no presence of discontinuities
+    """
     x = np.pi/2
     y = np.sin(x)
     
@@ -584,6 +615,12 @@ def test_sine_scalar():
     assert isinstance(Y,Sine) and y==Y() and dy()==np.cos(x)
 
 def test_sine_array():
+    """
+    Aim:test the sine function (value and derivative)
+    Expected:sine(array)
+    Obtained:sine(array)
+    Remarks:Exact derivatives are obtained because of no presence of discontinuities
+    """
     x = np.random.rand(4,5,6)
     y = np.sin(x)
     X = Variable(x,"X")
@@ -593,6 +630,12 @@ def test_sine_array():
     assert isinstance(Y,Sine) and np.array_equal(Y(),y) and np.array_equal(dy(),np.cos(x))
 
 def test_cosine_array():
+    """
+    Aim: test cosine function (value and derivative)
+    Expected:cosine(array)
+    Obtained:cosine(array)
+    Remarks:Exact derivatives are obtained because of no presence of discontinuities
+    """
     x = np.random.rand(4,5)
     y = np.cos(x)
     X = Variable(x,"X")
@@ -604,6 +647,12 @@ def test_cosine_array():
     assert isinstance(Y,Cosine) and np.array_equal(Y(),y) and np.array_equal(dy(),-np.sin(x))
 
 def test_cosine_scalar():
+    """
+    Aim:test cosine function (value and derivative)
+    Expected:1
+    Obtained:1
+    Remarks:Exact derivatives are obtained because of no presence of discontinuities
+    """
     x = 0
     y = np.cos(x)
     Y = Cosine(x)
@@ -613,6 +662,12 @@ def test_cosine_scalar():
     assert isinstance(Y,Cosine) and y==Y() and dy()==-np.sin(x)
 
 def test_tan_scalar():
+    """
+    Aim:test the tan function (value and derivative)
+    Expected: infinity
+    Obtained:1e20
+    Remarks: discontinuity occurs at this point for value and derivative and numpy kernel actually evades discontinuity in value but for derivative additional functionality is implemented.
+    """
     x = np.pi/2
     X = Variable(x,"X")
     y = np.tan(x)
@@ -623,6 +678,12 @@ def test_tan_scalar():
     print(temp)
     assert isinstance(Y,Tan) and y == Y() and (temp-dy()) < 0.000000000001
 def test_tan_scalar1():
+    """
+    Aim:the tan function (value and derivative)
+    Expected:0
+    Obtained:0
+    Remarks:derivatives are not exact to avoid discontinuity
+    """
     x = 0
     X = Variable(x,"X")
     y = np.tan(x)
@@ -633,6 +694,12 @@ def test_tan_scalar1():
     print(temp)
     assert isinstance(Y,Tan) and y == Y() and (temp-dy()) < 0.000000000001
 def test_tan_array():
+    """
+    Aim:the tan function (value and derivative)
+    Expected:tan(array)
+    Obtained:tan(array)
+    Remarks:derivatives are not exact to avoid discontinuity
+    """
     x = np.random.rand(4,5)
     y = np.tan(x)
     X = Variable(x,"X")
@@ -644,6 +711,12 @@ def test_tan_array():
     assert isinstance(Y,Tan) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.0000000001))
 
 def test_cosec_array():
+    """
+    Aim:test the cosec function and derivative
+    Expected:cosec(array)
+    Obtained:cosec(array+1e-12)
+    Remarks:derivatives are not exact to avoid discontinuity
+    """
     x = np.random.rand(4,5)
     y = 1.0/np.sin(x+1e-12)
     X = Variable(x,"X")
@@ -656,6 +729,12 @@ def test_cosec_array():
 
 
 def test_cosec_array_higher():
+    """
+    Aim:test the cosec function and derivative
+    Expected:cosec(array)
+    Obtained:cosec(array+1e-12)
+    Remarks:derivatives are not exact to avoid discontinuity
+    """
     x = np.random.rand(4,5,5)
     y = 1.0/np.sin(x+1e-12)
     X = Variable(x,"X")
@@ -667,6 +746,12 @@ def test_cosec_array_higher():
     assert isinstance(Y,Cosec) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()+temp),0.0000000001))
 
 def test_cosec_scalar():
+    """
+    Aim:test the cosec function and derivative
+    Expected:infinity
+    Obtained:1e12
+    Remarks:derivatives are not exact to avoid discontinuity
+    """
     x = 0
     y = 1.0/(np.sin(x+1e-12))
     X = Variable(x,"X")
@@ -681,6 +766,12 @@ def test_cosec_scalar():
 
 
 def test_cosec_scalar_1():
+    """
+    Aim:test the cosec function and derivative
+    Expected:1
+    Obtained:1
+    Remarks:derivatives are not exact to avoid discontinuity
+    """
     x = np.pi/2
     y = 1.0/(np.sin(x+1e-12))
     X = Variable(x,"X")
@@ -695,6 +786,12 @@ def test_cosec_scalar_1():
 
 
 def test_sec_scalar_1():
+    """
+    Aim:test the sec function and derivative
+    Expected:1
+    Obtained:1
+    Remarks:difference in derivative constitutes is due to avoiding discontinuities
+    """
     x = 0
     y = 1.0/(np.cos(x+1e-12))
     X = Variable(x,"X")
@@ -708,6 +805,12 @@ def test_sec_scalar_1():
     assert isinstance(Y,Sec) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.0000000001))
 
 def test_sec_scalar():
+    """
+    Aim:test the sec function and derivative
+    Expected:infinity
+    Obtained:1e12
+    Remarks:difference in derivative and also value constitutes is due to avoiding discontinuities
+    """
     x = np.pi/2
     y = 1.0/(np.cos(x+1e-12))
     X = Variable(x,"X")
@@ -722,6 +825,12 @@ def test_sec_scalar():
 
 
 def test_sec_array():
+    """
+    Aim:test the sec function and derivative
+    Expected:sec(array)
+    Obtained:sec(array+1e-12)
+    Remarks:difference in derivative constitutes is due to avoiding discontinuities
+    """
     x = np.random.randn(10,20)
     y = 1.0/(np.cos(x+1e-12))
     X = Variable(x,"X")
@@ -737,6 +846,12 @@ def test_sec_array():
 
 
 def test_cot_scalar():
+    """
+    Aim:test the cot function and derivative
+    Expected:0
+    Obtained:0(almost upto 12 digits)
+    Remarks:difference in derivative constitutes is due to avoiding discontinuities
+    """
     x = np.pi/2
     y = 1.0/(np.tan(x+1e-12))
     X = Variable(x,"X")
@@ -751,6 +866,12 @@ def test_cot_scalar():
 
 
 def test_cot_scalar():
+    """
+    Aim:test the cot function and derivative
+    Expected:infinity
+    Obtained:1e12
+    Remarks:discontinuity occurs at this point for value and derivative and numpy kernel actually evades discontinuity in value but for derivative additional functionality is implemented.
+    """
     x = 0
     y = 1.0/(np.tan(x+1e-12))
     X = Variable(x,"X")
@@ -766,6 +887,12 @@ def test_cot_scalar():
 
 
 def test_cot_array():
+    """
+    Aim: test the cot function and derivative
+    Expected: cot (array)
+    Obtained: cot(array+1e-12)
+    Remarks:difference in derivative constitutes is due to avoiding discontinuities
+    """
     x = np.random.randn(22,88)
     y = 1.0/(np.tan(x+1e-12))
     X = Variable(x,"X")
@@ -778,8 +905,14 @@ def test_cot_array():
     print(temp)
     assert isinstance(Y,Cot) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.0000001))
 
-
+#The sigmoid function is a typical case where the derivative is in terms of the function itself. This property is emphasized by the test cases.
 def test_sigmoid_scalar():
+    """ 
+    Aim: Test sigmoid function (value and derivative)
+    Expected:0.5
+    Obtained:0.5
+    Remarks: The values will be exact since the function is itself used as derivative
+    """
     x = 0
     y = 1/(1+np.exp(-x))
     X =Variable(x,"X")
@@ -789,6 +922,12 @@ def test_sigmoid_scalar():
     assert isinstance(Y,Sigmoid) and Y()==y and dy()==temp()
 
 def test_sigmoid_array():
+    """
+    Aim: test sigmoid function (value and derivative)
+    Expected:sigmoid(array)
+    Obtained:sigmoid(array)
+    Remarks:The values will be exact since the function is itself used as derivative
+    """
     x = np.random.rand(3,3,4)
     y = 1/(1+np.exp(-x))
     X =Variable(x,"X")
@@ -796,8 +935,17 @@ def test_sigmoid_array():
     dy = grad(Y,[X])[0]
     temp = Sigmoid(X)*(1-Sigmoid(X))
     assert isinstance(Y,Sigmoid) and np.array_equal(Y(),y) and np.array_equal(dy(),temp())
-
+#Note for all Inverse trigonometric functions.
+#The inverse trigonometric functions work only in specific ranges and there is a possibility that while avoiding infinities the value might be in undefined regions
+#This is handled by not using the epsilon in value and derivative also, but the derivative uses functions which already have implemented in a way to avoid infinities. Hence he infinities are handled without any hindrance to teh possible ranges.
+#The same is emphasized in the test cases below 
 def test_arcsin_scalar():
+    """
+    Aim:Test the arcsin function (value and derivative)
+    Expected: pi/2
+    Obtained: pi/2 
+    Remarks:discontinuity occurs at derivative but it is evaded by eps.
+    """
     x = 1
     y = np.arcsin(x)
     X =Variable(x,"X")
@@ -810,6 +958,12 @@ def test_arcsin_scalar():
     assert isinstance(Y,ArcSin) and Y()==y and dy()-temp < 1e-20
 
 def test_arcsin_array():
+    """
+    Aim:Test the arcsin function (value and derivative)
+    Expected:arcsin(array)
+    Obtained:arcsin(array)
+    Remarks:discontinuity occurs at derivative but it is evaded by eps.
+    """
     x = np.random.rand(5,5)
     y = np.arcsin(x)
     X =Variable(x,"X")
@@ -820,6 +974,12 @@ def test_arcsin_array():
     assert isinstance(Y,ArcSin) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.000000001))
 
 def test_arccos_scalar():
+    """
+    Aim: Test the arccos function (value and derivative)
+    Expected:0
+    Obtained:0
+    Remarks: typical case where functionality of derivative breaks but the value is more frequent to occur hence it is checked to prevent it. 
+    """
     x = 1
     y = np.arccos(x)
     X =Variable(x,"X")
@@ -831,6 +991,12 @@ def test_arccos_scalar():
     print(temp)
     assert isinstance(Y,ArcCos) and Y()==y and np.abs(dy()-temp) < 1e-20
 def test_arccos_array():
+    """
+    Aim:test the arccos function (value and derivative)
+    Expected: arccos(array)
+    Obtained: arccos(array)
+    Remarks: To avoid discontinuity of derivative , the values won't exactly match
+    """
     x = np.random.rand(5,5)
     y = np.arccos(x)
     X =Variable(x,"X")
@@ -841,6 +1007,12 @@ def test_arccos_array():
     assert isinstance(Y,ArcCos) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.000000001))
 
 def test_arctan_scalar():
+    """
+    Aim:test the arc tan function(value and derivative)
+    Expected: arctan(1e20)
+    Obtained: arctan(1e20)
+    Remarks: This case shows that if x tends to infinity , arctan tends to pi/2 and derivative tends to 0, which is expected behaviour
+    """
     x = 1e20
     y = np.arctan(x)
     X =Variable(x,"X")
@@ -854,6 +1026,12 @@ def test_arctan_scalar():
     
 
 def test_arctan_array():
+    """
+    Aim: test the arc tan function 
+    Expected: arc tan(array)
+    Obtained: arc tan(array)
+    Remarks: The values and derivatives won't be exact due to avoiding of discontinuity
+    """
     x = np.random.randn(5,5,5)
     y = np.arctan(x)
     X =Variable(x,"X")
@@ -864,6 +1042,12 @@ def test_arctan_array():
     assert isinstance(Y,ArcTan) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.000000000001))
 
 def test_arccot_array():
+    """
+    Aim: Test the arc cot function (value and derivative)
+    Expected: arc cot(array)
+    Obtained: arc cot (array + 1e-12 )
+    Remarks: The difference arises in derivative due to handling discontinuties
+    """
     x = np.random.randn(5,5,5)
     y = np.arctan(1/(x+1e-12))
     X =Variable(x,"X")
@@ -875,6 +1059,12 @@ def test_arccot_array():
 
 
 def test_arccot_scalar():
+    """
+    Aim: Test the arc cot function (value and derivative)
+    Expected: pi/2 
+    Obtained: pi/2
+    Remarks: Arc cot of 0 is also nearly calculated close to np.pi/2 , this case is also checked
+    """
     x = 0
     y = np.arctan(1/(x+1e-12))
     X =Variable(x,"X")
@@ -886,6 +1076,12 @@ def test_arccot_scalar():
     assert isinstance(Y,ArcCot) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.0000000000001))
 
 def test_arccosec_scalar():
+    """
+    Aim: Test the arc cosec function (value and derivative)
+    Expected: arc cosec(1)
+    Obtained: arc cosec (1+1e-12)
+    Remarks: This is a place where discontinuity occurs in the derivative and the anomaly is rightly shifted with a small margin of negotiable error.
+    """
     x = 1
     y = np.arcsin(1/(x+1e-12))
     X =Variable(x,"X")
@@ -897,6 +1093,12 @@ def test_arccosec_scalar():
     print(temp)
     assert isinstance(Y,ArcCosec) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.0000000000001))
 def test_arccosec_array():
+    """
+    Aim: Test the Arc cosecant function (derivative and value)
+    Expected: arc cosecant value of array
+    Obtained: arc cosecant value of array+1e-12
+    Remarks:This array covers the whole range of Arccosecant ,i.e 1 to inf(in this case 1e20) ,such that every possible discontinuity is correctly checked
+    """
     x = np.random.uniform(1.1,1e20,(5,5))
     y = np.arcsin(1/(x+1e-12))
     X =Variable(x,"X")
@@ -909,6 +1111,12 @@ def test_arccosec_array():
     assert isinstance(Y,ArcCosec) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.0000000000001))
 
 def test_arcsec_scalar():
+    """
+    Aim: Test the arcseccant function (value and derivative)
+    Expected: arc secant(1)
+    Obtained: arc secant(1+1e-12)
+    Remarks: This is a typical case where the function breaks infinity in derivative occurs, the discontinuity is evaded by shifting it with a small error.
+    """
     x = 1
     y = np.arccos(1/(x+1e-12))
     X =Variable(x,"X")
@@ -921,6 +1129,12 @@ def test_arcsec_scalar():
     assert isinstance(Y,ArcSec) and np.array_equal(Y(),y) and np.all(np.less(np.abs(dy()-temp),0.0000000000001))
 
 def test_arcsec_array():
+    """
+    Aim: Test the arcseccant function (value and derivative)
+    Expected: arc secant (array) 
+    Obtained: arc secant(array+1e-12 )
+    Remarks: This is a case where functionality might break , values taken as 1.1(least possible) and 1e20(system precision inf) , That anomaly avoided by some error
+    """
     x = np.random.uniform(1.1,1e20,(3,3))
     y = np.arccos(1/(x+1e-12))
     X =Variable(x,"X")
@@ -934,6 +1148,12 @@ def test_arcsec_array():
 
 
 def test_abs_scalar():
+    """
+    Aim:To test the absolute function(the value and derivative)
+    Expected: 0
+    Obtained: 0
+    Remarks:The derivatives won't be exact as derivative of abs involves division
+    """
     x = 0
     y = np.abs(x)
     X = Variable(x,"X")
@@ -944,6 +1164,12 @@ def test_abs_scalar():
     assert isinstance(Y,Absolute) and np.array_equal(Y(),y) and np.abs(dy()-temp) < 1e-10  
 
 def test_abs_array():
+    """
+    Aim: To test the absolute function(the value and derivative)
+    Expected: absolute value of array
+    Obtained: absolute value of array 
+    Remarks: The derivatives won't be exact as derivative of abs involves division
+    """
     x= np.random.uniform(-1e20,1e20,(5,5))
     y = np.abs(x)
     X = Variable(x,"X")

@@ -1,3 +1,13 @@
+"""
+Basically all the test cases below have same structure. 
+Aim : To test the forward propagation of the Neural Network 
+Expected : The calculations are done for a Neural Network with one hidden layer whose weights are set to 1.  
+Obtained : The output of the Neural Network class 
+Remarks: Each test case employs different set of inputs.
+"""
+
+
+
 import autodiff as ad 
 import numpy as np
 from NN_architecture_2 import *

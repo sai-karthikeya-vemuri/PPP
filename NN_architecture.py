@@ -1,8 +1,9 @@
 """
-I am going to solve the burgers equation here using the deep NN
-and at present thr autodiff package by Bruno Gavranovic'
+This file contains the class of Neural Network Architecture (Long-Short Term Memory Neural Network) with a sigmoid activation function
+The Architecture is given by Justin Sirignano and Konstantinos Spiliopoulos in the paper titled "DGM: A deep learning algorithm for solving partial differential equations"
 
 """
+#Import required Packages
 import numpy as np 
 import autodiff as ad 
 import os 
@@ -10,6 +11,15 @@ import os
 #os.environ[“PATH”] += os.pathsep + r'C:\users\91994\appdata\local\programs\python\python37\lib\site-packages\graphviz-2.38\release\bin’
 
 def diff_n_times(graph, wrt, n):
+    """
+    Function for getting higher derivatives
+    Inputs:
+    graph : The Variable whose derivative is to be taken
+    wrt : the variable whose wrt the derivatives must be taken
+    n : order of derivative
+    outputs:
+    the higher derivative of variable(in the form of Comp Graph)
+    """
     for i in range(n):
         graph = ad.grad(graph, [wrt])[0]
 
@@ -27,12 +37,30 @@ def xavier(input_dim,output_dim):
 
 """
 def xavier(input_dim,output_dim):
+    """
+    This function returns an array of given dimensions filled with random values according to the Xavier Initialization(Normal Distribution whose mean is zero and standard deviation is inverse of avg of dimensions)
+    Inputs:
+    input_dim: The incoming dimension of the Neural Net 
+    Outpu_dim: The outgoing dimension of the Neural Net
+    Returns:
+    A array filled with random values according to the distribution
+    """
     stddev = np.sqrt(2/(input_dim+output_dim))
     return np.random.normal(loc=0.0,scale=stddev,size=(input_dim,output_dim))
 
 
 
 class lstm_layer():
+    """
+    This class defines one layer of the LSTM Neural Network.
+    The Inputs for Initialization are basically the Number of Incoming and Outgoing Neurons.
+    This class has a setter and getter methods for changing the weights and getting those weights
+    The weights are initialized according to xavier initialization.
+    The output layer method computes what happens actually in the Neural Network.
+    The input is recurrent among several sub-neurons and they are combined to form a single output (brief implementation)
+
+
+    """
 
     def __init__(self,input_dim,output_dim):
         #self.inputs = inputs
@@ -75,6 +103,9 @@ class lstm_layer():
 
         return S_New
     def set_params_layer(self,params):
+        #Sanity check for dimensions
+        #The values are only set if the dimensions are equal. 
+        #This prevents misbehaving of code 
         assert self._Uz.shape == params[0].shape and self._Ug.shape == params[1].shape and self._Ur.shape == params[2].shape and self._Uh.shape == params[3].shape \
             and self._Wz.shape == params[4].shape and self._Wg.shape == params[5].shape and self._Wr.shape == params[6].shape and self._Wh.shape == params[7].shape \
                 and self._bz.shape == params[8].shape and self._bg.shape == params[9].shape and self._br.shape == params[10].shape and self._bh.shape == params[11].shape
@@ -94,7 +125,22 @@ class lstm_layer():
     def get_weights_layer(self):
         return [self._Uz,self._Ug,self._Ur,self._Uh,self._Wz,self._Wg,self._Wr,self._Wh,self._bz,self._bg,self._br,self._bh]
 class NeuralNetLSTM():
+    """
+    This class actually creates the Neural Network as objects.
+    Initialization requires:
+    number of units: Number of Neurons per layer.
+    number of layers: Number of layers (excluding one additional common hidden layer)
+    input dim : The input vector dimension 
+    Output dim: The output vector dimension.
+    It has setter and getter methods for setting the weights and getting the weights. 
+    Each layer is called by instantiating the layer class above and corresponding calculations are carried forward forming a Neural Network on the whole.
+
+    """
     def __init__(self,number_of_units,number_of_layers,input_dim,output_dim):
+        #Sanity check: 
+        #Minimum number of units >= 2
+        #Number of layers should be integer > 0
+        #Input and Output dimensions should be positive integers
         assert isinstance(number_of_units,int) and number_of_units>=2 and number_of_layers >=0 and isinstance(number_of_layers,int) and isinstance(input_dim,int) and input_dim>0 and isinstance(output_dim,int) and output_dim>0 
 
         self.number_of_units= number_of_units
@@ -162,7 +208,7 @@ class NeuralNetLSTM():
         val = ad.MatMul(S_final,self._Wf) + self._Bf
         #print("The output:",val())
         return val
-        
+#--------------------------------------Just some examples used while debugging the code................        
 def z(model,points):
     return model.output(points)
 def loss_domain(model,points):

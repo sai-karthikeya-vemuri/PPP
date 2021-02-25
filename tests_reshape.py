@@ -1,3 +1,23 @@
+"""
+The following test cases test the functinality of all the operations employed in the reshape section of the module i.efunctionalities which deal with the reshaping of arrays
+
+Aim: All the test cases more or less aim for checking whether the reshaping function is working as expected (asserted aginst known values) and derivatives are flowing adequately
+and all derivatives are hand calculated just like in Einsum.
+No Anomalies have been reported 
+WARNING:
+
+Running these tests , all tests will pass but the following warning is shown.
+
+This update in syntax of python unfortunately came after implementation of the functionalities, and this won't actually come into force until the future versions of python.  
+
+
+FutureWarning: Using a non-tuple sequence for multidimensional indexing is deprecated; use `arr[tuple(seq)]` instead of `arr[seq]`. In the future this will be interpreted as an array index, `arr[np.array(seq)]`, which will result either in an error or a different result.
+
+hence avoid it.
+"""
+
+
+#Import required packages
 import pytest
 import numpy as np 
 from autodiff.core.reshape import *
